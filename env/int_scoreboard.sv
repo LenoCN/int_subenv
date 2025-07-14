@@ -1,8 +1,6 @@
 `ifndef INT_SCOREBOARD_SV
 `define INT_SCOREBOARD_SV
 
-`include "seq/int_transaction.sv"
-
 class int_scoreboard extends uvm_scoreboard;
     `uvm_component_utils(int_scoreboard)
 

@@ -1,7 +1,5 @@
 `ifndef INT_SUBENV
 `define INT_SUBENV
-`include "env/int_monitor.sv"
-`include "env/int_scoreboard.sv"
 
 class int_subenv extends soc_base_subenv;
     `uvm_component_utils(int_subenv)

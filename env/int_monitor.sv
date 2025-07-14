@@ -1,8 +1,6 @@
 `ifndef INT_MONITOR_SV
 `define INT_MONITOR_SV
 
-`include "seq/int_transaction.sv"
-
 class int_monitor extends uvm_monitor;
     `uvm_component_utils(int_monitor)
 

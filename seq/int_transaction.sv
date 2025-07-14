@@ -1,6 +1,8 @@
 `ifndef INT_TRANSACTION_SV
 `define INT_TRANSACTION_SV
 
+`include "seq/int_def.sv"
+
 class int_transaction extends uvm_sequence_item;
     `uvm_object_utils(int_transaction)
 
