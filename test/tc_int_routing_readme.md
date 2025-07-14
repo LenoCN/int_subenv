@@ -16,18 +16,34 @@
 -   **数据结构**: 模型内部使用一个静态数组 `interrupt_map[]` 来存储每一个中断的详细信息。每个数组元素都是一个 `interrupt_info_s` 结构体，包含了中断名、索引、所属中断组、RTL源路径以及所有可能的目标（AP, SCP, MCP等）的路由信息和检查路径。
 -   **自动化构建**: `build()` 函数负责将CSV中的信息转换为SystemVerilog的数据结构，填充 `interrupt_map` 数组。
 
-### 2.2. 验证序列 (`int_routing_sequence`)
+### 2.2. 全局监控与检查机制
 
--   **启动**: 测试用例 `tc_int_routing` 在其 `main_phase` 中创建并启动 `int_routing_sequence`。
--   **执行流程**:
-    1.  序列首先调用 `int_routing_model::build()` 来构建内存中的中断路由预测模型。
-    2.  接着，序列会遍历 `interrupt_map` 数组中的**每一个**中断条目。
-    3.  对于每一个中断，序列执行 `check_interrupt_routing` 任务，该任务：
-        -   使用 `uvm_hdl_force` 函数强制将该中断的**源RTL信号**置为有效（`1`）。
-        -   等待一小段时间（例如`10ns`），以确保信号有足够的时间在设计中传播。
-        -   调用 `check_dest` 辅助任务，根据模型中的预期结果，使用 `uvm_hdl_read` 函数读取**所有目标RTL信号**的当前值。
-        -   将读取到的实际值与模型中的期望值进行比较。如果一个中断被路由到了非预期的目的地，或者没有被路由到预期的目的地，测试将报告一个 `UVM_ERROR`。
-        -   使用 `uvm_hdl_release` 释放对源信号的强制操作，为下一次检查做准备。
+为了解决瞬时错误中断（毛刺）可能被遗漏的问题，我们引入了基于`uvm_monitor`和`uvm_scoreboard`的全局被动检查机制。
+
+-   **中断监视器 (`int_monitor`)**:
+    -   在整个仿真过程中，`int_monitor` **持续不断地**监视所有中断目标总线。
+    -   一旦检测到任何中断信号变为有效，它会立即捕获该事件，并将其封装成一个 `int_transaction` 事务，然后通过 `uvm_analysis_port` 广播出去。
+
+-   **中断记分板 (`int_scoreboard`)**:
+    -   `int_scoreboard` 订阅 `int_monitor` 广播的事务。
+    -   每当接收到一个中断事务，记分板会检查此中断是否在预期之中。
+
+-   **验证序列 (`int_routing_sequence`)**:
+    -   `int_routing_sequence` 的角色被简化为**中断触发器**。
+    -   在通过 `uvm_hdl_force` 触发一个中断**之前**，它会先调用 `int_scoreboard::add_expected()` 函数，在记分板中“登记”它将要触发的中断及其预期的目的地。
+    -   触发中断后，它不再负责检查，而是相信 `int_monitor` 和 `int_scoreboard` 会完成这项工作。
+
+### 2.3. 工作流程总结
+
+1.  `tc_int_routing` 启动 `int_routing_sequence`。
+2.  `int_monitor` 开始在后台持续监控所有中断目标总线。
+3.  `int_routing_sequence` 遍历中断模型，对于每个中断：
+    a.  调用 `int_scoreboard::add_expected()`，告知记分板：“我即将触发中断X，它应该被路由到目的地Y和Z。”
+    b.  `force` 中断X的源信号。
+4.  `int_monitor` 检测到目的地Y和Z上的中断信号变为有效，并发送通知给 `int_scoreboard`。
+5.  `int_scoreboard` 收到通知，发现这与预期匹配，标记为成功。
+6.  如果在任何时候 `int_monitor` 检测到一个**未被登记**的中断（例如，由于设计错误，中断X被错误地路由到了目的地A），`int_scoreboard` 将立即报告一个 `UVM_ERROR`，指出这是一个非预期的中断。
+7.  在测试结束时，`int_scoreboard` 会进行检查，如果任何登记过的预期中断**从未被检测到**，它也会报告 `UVM_ERROR`，指出有中断丢失。
 
 ## 3. 如何扩展
 
