@@ -23,38 +23,57 @@ class int_monitor extends uvm_monitor;
     endfunction
 
     virtual task run_phase(uvm_phase phase);
-        // Build the model to have access to all interrupt definitions
         int_routing_model::build();
-
-        // Fork a process for each destination to monitor them in parallel
-        // This is a conceptual representation. A real implementation would need to know the bus widths
-        // and structure from the int_interface. We assume placeholder signals for now.
-        // E.g. fork monitor_bus("AP", int_if.ap_interrupt_bus);
-        //      fork monitor_bus("SCP", int_if.scp_interrupt_bus);
-        //      ... and so on for all destination buses ...
-
-        // For this example, we'll create a single continuous loop that conceptually checks all interrupts.
-        forever begin
-            #1ns; // Check every 1ns
+        
+        // Create a fork for each interrupt to be monitored in parallel.
+        // This provides better isolation and scalability than monitoring entire buses.
+        fork
             foreach (int_routing_model::interrupt_map[i]) begin
-                check_and_report_interrupt(int_routing_model::interrupt_map[i]);
+                automatic int j = i;
+                fork
+                    monitor_interrupt(int_routing_model::interrupt_map[j]);
+                join_none
             end
+        join
+    endtask
+
+    // Monitors a single interrupt's destinations
+    virtual task monitor_interrupt(interrupt_info_s info);
+        fork
+            if (info.rtl_path_ap != "") monitor_single_path(info, "AP", info.rtl_path_ap);
+            if (info.rtl_path_scp != "") monitor_single_path(info, "SCP", info.rtl_path_scp);
+            if (info.rtl_path_mcp != "") monitor_single_path(info, "MCP", info.rtl_path_mcp);
+            if (info.rtl_path_imu != "") monitor_single_path(info, "IMU", info.rtl_path_imu);
+            if (info.rtl_path_io != "") monitor_single_path(info, "IO", info.rtl_path_io);
+            if (info.rtl_path_other_die != "") monitor_single_path(info, "OTHER_DIE", info.rtl_path_other_die);
+        join_none
+    endtask
+
+    // Monitors a specific RTL signal path for an interrupt
+    virtual task monitor_single_path(interrupt_info_s info, string dest, string path);
+        logic value;
+        forever begin
+            // Wait for the interrupt signal to go high
+            wait_for_signal_edge(path, 1);
+            
+            // Send the transaction when the interrupt is detected
+            send_transaction(info, dest);
+
+            // Wait for the interrupt signal to go low to prevent re-triggering
+            wait_for_signal_edge(path, 0);
         end
     endtask
 
-    // Placeholder task to check all destinations for a given interrupt
-    // A more robust implementation would monitor buses directly.
-    virtual task check_and_report_interrupt(interrupt_info_s info);
-        logic value;
-        // Check AP destination
-        if (info.rtl_path_ap != "" && uvm_hdl_read(info.rtl_path_ap, value) && value == 1) begin
-            send_transaction(info, "AP");
+    // Helper task to wait for a specific signal value using polling.
+    // In a real scenario, this would be replaced with @(posedge/negedge virtual_interface.signal)
+    virtual task wait_for_signal_edge(string path, logic expected_value);
+        logic current_value;
+        forever begin
+            #1ns;
+            if (uvm_hdl_read(path, current_value) && current_value == expected_value) begin
+                break;
+            end
         end
-        // Check SCP destination
-        if (info.rtl_path_scp != "" && uvm_hdl_read(info.rtl_path_scp, value) && value == 1) begin
-            send_transaction(info, "SCP");
-        end
-        // ...checks for MCP, IMU, IO, OTHER_DIE would follow
     endtask
 
     virtual task send_transaction(interrupt_info_s info, string dest);
@@ -62,9 +81,7 @@ class int_monitor extends uvm_monitor;
         trans.interrupt_info = info;
         trans.destination_name = dest;
         item_collected_port.write(trans);
-        // Add a mechanism to avoid re-triggering for a persistent interrupt
-        // For example, wait until the signal goes low again.
-        // `uvm_info(get_type_name(), $sformatf("Detected interrupt '%s' at '%s'", info.name, dest), UVM_DEBUG)
+        `uvm_info(get_type_name(), $sformatf("Detected interrupt '%s' at '%s'", info.name, dest), UVM_HIGH)
     endtask
 
 endclass
