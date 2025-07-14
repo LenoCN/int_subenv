@@ -66,10 +66,10 @@ def parse_interrupt_csv(input_path, output_path):
             current_sv_group = ""
 
             for row in reader:
-                if not any(field.strip() for field in row): continue
+                if not any(field.strip() for field in row) or len(row) < 13: continue
 
                 # Check for group header row
-                if not row[0].strip() and len(row) > 1 and "中断源" in row[1]:
+                if not row[0].strip() and "中断源" in row[1]:
                     csv_group_name = row[1].strip()
                     if csv_group_name in GROUP_MAP:
                         current_sv_group = GROUP_MAP[csv_group_name]
@@ -96,8 +96,9 @@ def parse_interrupt_csv(input_path, output_path):
                 name_sanitized = re.sub(r'(\s*\[\d+:\d+\]\s*)|(\s*\[\d+\]\s*)', '', name).strip()
                 name_sanitized = name_sanitized.replace(' ', '_')
                 
-                # Map trigger and polarity
+                #Map trigger and polarity
                 trigger = TRIGGER_MAP.get(trigger_str, "UNKNOWN_TRIGGER")
+                if "Pulse" in trigger_str: trigger = "EDGE" # Treat Pulse as Edge
                 polarity = POLARITY_MAP.get(polarity_str, "UNKNOWN_POLARITY")
                 
                 # Construct the entry
