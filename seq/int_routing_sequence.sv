@@ -1,8 +1,6 @@
 `ifndef INT_ROUTING_SEQUENCE_SV
 `define INT_ROUTING_SEQUENCE_SV
 
-`include "int_routing_model.sv"
-
 class int_routing_sequence extends int_base_sequence;
     `uvm_object_utils(int_routing_sequence)
 

@@ -38,8 +38,7 @@ class int_tc_base extends soc_tc_base;
     endtask
 
     task main_phase(uvm_phase phase);
-    phase.raise_objection(this);
-    phase.drop_objection(this);
+        // Base task, derived tasks should handle objections
     endtask : main_phase
 
     task post_shutdown_phase(uvm_phase phase);
