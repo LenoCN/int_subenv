@@ -14,6 +14,7 @@ package int_test_pkg;
     `include "int_tc_base.sv"
     `include "tc_int_sanity.sv"
     `include "tc_scp_rd_reg.sv"
+    `include "tc_int_routing.sv"
 
 endpackage
 import int_test_pkg::*;
