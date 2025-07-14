@@ -20,11 +20,17 @@ typedef enum {
     IO_DIE
 } interrupt_group_e;
 
+// Defines trigger and polarity types
+typedef enum { LEVEL, EDGE, UNKNOWN_TRIGGER } interrupt_trigger_e;
+typedef enum { ACTIVE_HIGH, ACTIVE_LOW, RISING_FALLING, UNKNOWN_POLARITY } interrupt_polarity_e;
+
 // Defines the structure for a single interrupt entry in our model
 typedef struct {
     string               name;
     int                  index;
     interrupt_group_e    group;
+    interrupt_trigger_e  trigger;
+    interrupt_polarity_e polarity;
     string               rtl_path_src; // RTL path to force the interrupt source
 
     // Destination routing information and check paths
