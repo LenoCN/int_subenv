@@ -16,7 +16,7 @@ class tc_all_merge_interrupts extends int_base_test;
         `uvm_info("TC_ALL_MERGE", "Starting comprehensive merge interrupt test", UVM_MEDIUM)
         
         seq = all_merge_interrupts_sequence::type_id::create("seq");
-        seq.start(env.agent.sequencer);
+        seq.start(env.m_sequencer);
         
         `uvm_info("TC_ALL_MERGE", "Completed comprehensive merge interrupt test", UVM_MEDIUM)
         

@@ -82,7 +82,7 @@ class int_lightweight_sequence extends int_base_sequence;
         finish_item(stim_item);
 
         `uvm_info(get_type_name(), $sformatf("Waiting for detection of interrupt: %s", info.name), UVM_HIGH)
-        // Wait for interrupt to be detected by monitor
+        // Wait for interrupt to be detected by monitor using proper UVM approach
         wait_for_interrupt_detection(info);
 
         // Send clear command to driver (simulates software clearing)
