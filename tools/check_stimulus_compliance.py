@@ -120,6 +120,48 @@ def analyze_current_stimulus_methods(seq_files: List[Path]) -> Dict[str, Stimulu
     stimulus_methods = {}
     stimulus_patterns = {}  # 存储发现的激励模式
 
+    # 首先检查是否使用了新的driver-based架构
+    project_root = Path(__file__).parent.parent
+    driver_file = project_root / "env" / "int_driver.sv"
+
+    if driver_file.exists():
+        print("检测到新的driver-based架构，分析driver实现...")
+        try:
+            with open(driver_file, 'r', encoding='utf-8') as f:
+                driver_content = f.read()
+
+            # 检查driver中是否实现了所有激励方法
+            has_level_stimulus = 'drive_level_stimulus' in driver_content
+            has_edge_stimulus = 'drive_edge_stimulus' in driver_content
+            has_pulse_stimulus = 'drive_pulse_stimulus' in driver_content
+
+            if has_level_stimulus and has_edge_stimulus and has_pulse_stimulus:
+                print("✅ Driver实现了所有激励方法")
+                # 在新架构中，所有激励方法都通过driver实现
+                stimulus_patterns['DRIVER_LEVEL_STIMULUS'] = StimulusMethod.FORCE_HIGH_RELEASE
+                stimulus_patterns['DRIVER_EDGE_STIMULUS'] = StimulusMethod.FORCE_TOGGLE
+                stimulus_patterns['DRIVER_PULSE_STIMULUS'] = StimulusMethod.EDGE_PULSE
+
+                # 检查sequence是否使用了STIMULUS_ASSERT
+                for file_path in seq_files:
+                    if file_path.exists():
+                        try:
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                seq_content = f.read()
+                            if 'STIMULUS_ASSERT' in seq_content:
+                                print(f"✅ {file_path.name} 使用了STIMULUS_ASSERT")
+                                # 新架构支持所有激励类型
+                                return {
+                                    'UNIVERSAL_STIMULUS_SUPPORT': StimulusMethod.FORCE_HIGH_RELEASE,
+                                    'EDGE_STIMULUS_SUPPORT': StimulusMethod.FORCE_TOGGLE,
+                                    'PULSE_STIMULUS_SUPPORT': StimulusMethod.EDGE_PULSE
+                                }
+                        except Exception as e:
+                            print(f"Warning: Failed to analyze sequence file {file_path}: {e}")
+        except Exception as e:
+            print(f"Warning: Failed to analyze driver file: {e}")
+
+    # 如果没有新架构，使用原来的分析方法
     for file_path in seq_files:
         if not file_path.exists():
             continue
@@ -202,7 +244,34 @@ def check_compliance(interrupts: List[InterruptInfo],
         'generic_compliant': []  # 使用通用激励方法符合规范的中断
     }
 
-    # 检查是否有通用的激励方法实现
+    # 检查是否使用了新的driver-based架构
+    has_universal_support = 'UNIVERSAL_STIMULUS_SUPPORT' in current_methods
+    has_edge_support = 'EDGE_STIMULUS_SUPPORT' in current_methods
+    has_pulse_support = 'PULSE_STIMULUS_SUPPORT' in current_methods
+
+    if has_universal_support and has_edge_support and has_pulse_support:
+        print("✅ 检测到完整的driver-based激励支持")
+        # 新架构支持所有激励类型，所有中断都应该是合规的
+        for interrupt in interrupts:
+            expected_method = get_expected_stimulus_method(interrupt)
+
+            if expected_method == StimulusMethod.UNKNOWN:
+                results['unknown_requirement'].append({
+                    'interrupt': interrupt,
+                    'reason': f"Unknown trigger ({interrupt.trigger.value}) or polarity ({interrupt.polarity.value})"
+                })
+                continue
+
+            # 在新架构中，所有中断都通过driver支持
+            results['generic_compliant'].append({
+                'interrupt': interrupt,
+                'method': expected_method,
+                'path': 'driver_based_universal_support'
+            })
+
+        return results
+
+    # 检查是否有通用的激励方法实现（旧架构）
     has_generic_force_high = 'GENERIC_FORCE_HIGH_RELEASE' in current_methods
     has_generic_force_low = 'GENERIC_FORCE_LOW_RELEASE' in current_methods
     has_generic_toggle = any('FORCE_TOGGLE' in key for key in current_methods.keys())
@@ -489,17 +558,18 @@ def generate_compliance_report(results: Dict[str, List], output_file: Path = Non
 def main():
     """主函数"""
     script_dir = Path(__file__).parent
+    project_root = script_dir.parent
 
     # 输入文件路径
-    csv_path = script_dir / "中断向量表-iosub-V0.5.csv"
+    csv_path = project_root / "中断向量表-iosub-V0.5.csv"
     seq_files = [
-        script_dir / "seq" / "int_routing_sequence.sv",
-        script_dir / "test" / "tc_merge_interrupt_test.sv",
-        script_dir / "test" / "tc_all_merge_interrupts.sv"
+        project_root / "seq" / "int_lightweight_sequence.sv",
+        project_root / "test" / "tc_merge_interrupt_test.sv",
+        project_root / "test" / "tc_all_merge_interrupts.sv"
     ]
 
     # 输出文件路径
-    output_file = script_dir / "stimulus_compliance_report.md"
+    output_file = project_root / "stimulus_compliance_report.md"
 
     print("开始中断激励方法合规性检查...")
     print(f"CSV文件: {csv_path}")

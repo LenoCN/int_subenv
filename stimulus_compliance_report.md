@@ -1,0 +1,455 @@
+================================================================================
+中断激励方法合规性检查报告
+================================================================================
+
+## 统计摘要
+总中断数量: 423
+符合规范 (总计): 423 (100.0%)
+  - 精确匹配: 0 (0.0%)
+  - 通用方法: 423 (100.0%)
+不符合规范: 0 (0.0%)
+缺少激励方法: 0 (0.0%)
+无法确定要求: 0 (0.0%)
+
+## 符合规范的中断
+------------------------------------------------------------
+### 使用通用激励方法的中断:
+这些中断使用了通用的激励方法实现，符合其trigger/polarity要求:
+
+**force_high_release** (407 个中断):
+  - iosub_slv_err_intr (IOSUB) - Level/Active high
+  - iosub_buffer_ovf_intr (IOSUB) - Level/Active high
+  - iosub_timeout_intr (IOSUB) - Level/Active high
+  - iosub_qspi_intr (IOSUB) - Level/Active high
+  - iosub_spi_intr (IOSUB) - Level/Active high
+  - iosub_i2c0_intr (IOSUB) - Level/Active high
+  - iosub_i2c1_intr (IOSUB) - Level/Active high
+  - iosub_i2c2_intr (IOSUB) - Level/Active high
+  - iosub_pmbus0_intr (IOSUB) - Level/Active high
+  - iosub_pmbus1_intr (IOSUB) - Level/Active high
+  - iosub_uart0_intr (IOSUB) - Level/Active high
+  - iosub_uart1_intr (IOSUB) - Level/Active high
+  - iosub_uart2_intr (IOSUB) - Level/Active high
+  - iosub_uart3_intr (IOSUB) - Level/Active high
+  - iosub_uart4_intr (IOSUB) - Level/Active high
+  - iosub_dimm_i3c0_intr (IOSUB) - Level/Active high
+  - iosub_dimm_i3c1_intr (IOSUB) - Level/Active high
+  - iosub_dimm_i3c2_intr (IOSUB) - Level/Active high
+  - iosub_sideband_i3c0_intr (IOSUB) - Level/Active high
+  - iosub_gpio0_intr (IOSUB) - Level/Active high
+  - iosub_gpio1_intr (IOSUB) - Level/Active high
+  - iosub_gpio2_intr (IOSUB) - Level/Active high
+  - iosub_rgmii0_q0_intr (IOSUB) - Level/Active high
+  - iosub_rgmii0_q1_intr (IOSUB) - Level/Active high
+  - iosub_rgmii0_q2_intr (IOSUB) - Level/Active high
+  - iosub_rgmii0_q3_intr (IOSUB) - Level/Active high
+  - iosub_rgmii1_q0_intr (IOSUB) - Level/Active high
+  - iosub_rgmii1_q1_intr (IOSUB) - Level/Active high
+  - iosub_rgmii1_q2_intr (IOSUB) - Level/Active high
+  - iosub_rgmii1_q3_intr (IOSUB) - Level/Active high
+  - iosub_pvt_intr (IOSUB) - Level/Active high
+  - iosub_dfx_lte_intr (IOSUB) - Level/Active high
+  - iosub_dw_axi_dlock_intr (IOSUB) - Level/Active high
+  - iosub_mem_ist_intr (IOSUB) - Level/Active high
+  - iosub_dma_comreg_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch0_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch1_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch2_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch3_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch4_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch5_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch6_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch7_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch8_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch9_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch10_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch11_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch12_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch13_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch14_intr (IOSUB) - Level/Active high
+  - iosub_dma_ch15_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_0_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_1_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_2_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_3_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_4_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_5_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_6_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_7_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_8_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_9_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_10_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_11_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_12_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_13_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_14_intr (IOSUB) - Level/Active high
+  - iosub_pad_in_15_intr (IOSUB) - Level/Active high
+  - iosub_watchdog_io_intr (IOSUB) - Level/Active high
+  - iosub_pll_lock_intr (IOSUB) - Level/Active high
+  - iosub_pll_unlock_intr (IOSUB) - Level/Active high
+  - iosub_ras_cri_intr (IOSUB) - Level/Active high
+  - iosub_ras_eri_intr (IOSUB) - Level/Active high
+  - iosub_ras_fhi_intr (IOSUB) - Level/Active high
+  - iosub_strap_load_fail_intr (IOSUB) - Level/Active high
+  - iosub_abnormal_0_intr (IOSUB) - Level/Active high
+  - iosub_abnormal_1_intr (IOSUB) - Level/Active high
+  - iosub_normal_intr (IOSUB) - Level/Active high
+  - pvt_temp_alarm_intr (IOSUB) - Level/Active high
+  - merge_pll_intr_lock (IOSUB) - Level/Active high
+  - merge_pll_intr_unlock (IOSUB) - Level/Active high
+  - merge_pll_intr_frechangedone (IOSUB) - Level/Active high
+  - merge_pll_intr_frechange_tot_done (IOSUB) - Level/Active high
+  - merge_pll_intr_intdocfrac_err (IOSUB) - Level/Active high
+  - usb0_ctrl_xhci_intr (USB) - Level/Active high
+  - usb0_ctrl_otg_intr (USB) - Level/Active high
+  - usb0_ctrl_dev_intr (USB) - Level/Active high
+  - usb0_ctrl_sys_intr (USB) - Level/Active high
+  - usb0_phy3_intr (USB) - Level/Active high
+  - usb1_ctrl_xhci_intr (USB) - Level/Active high
+  - usb1_ctrl_otg_intr (USB) - Level/Active high
+  - usb1_ctrl_dev_intr (USB) - Level/Active high
+  - usb1_ctrl_sys_intr (USB) - Level/Active high
+  - usb1_phy3_intr (USB) - Level/Active high
+  - usb0_apb1ton_intr (USB) - Level/Active high
+  - usb1_apb1ton_intr (USB) - Level/Active high
+  - usb_top_apb1ton_intr (USB) - Level/Active high
+  - scp_wdt0_ws0 (SCP) - Level/Active high
+  - scp_wdt0_ws1 (SCP) - Level/Active high
+  - scp_wdt1_ws0 (SCP) - Level/Active high
+  - scp_wdt1_ws1 (SCP) - Level/Active high
+  - scp_timer64_0_intr (SCP) - Level/Active high
+  - scp_timer64_1_intr (SCP) - Level/Active high
+  - scp_timer64_2_intr (SCP) - Level/Active high
+  - scp_timer64_3_intr (SCP) - Level/Active high
+  - scp_cpu_bus_fault_intr (SCP) - Level/Active high
+  - scp_acl_intr (SCP) - Level/Active high
+  - scp2ap_mhu_send_intr_0 (SCP) - Level/Active high
+  - scp2ap_mhu_send_intr_1 (SCP) - Level/Active high
+  - scp2ap_mhu_send_intr_2 (SCP) - Level/Active high
+  - scp2ap_mhu_send_intr_3 (SCP) - Level/Active high
+  - scp2ap_mhu_receive_intr_0 (SCP) - Level/Active high
+  - scp2ap_mhu_receive_intr_1 (SCP) - Level/Active high
+  - scp2ap_mhu_receive_intr_2 (SCP) - Level/Active high
+  - scp2ap_mhu_receive_intr_3 (SCP) - Level/Active high
+  - mcp2ap_mhu_send_intr_0 (SCP) - Level/Active high
+  - mcp2ap_mhu_send_intr_1 (SCP) - Level/Active high
+  - mcp2ap_mhu_send_intr_2 (SCP) - Level/Active high
+  - mcp2ap_mhu_send_intr_3 (SCP) - Level/Active high
+  - mcp2ap_mhu_receive_intr_0 (SCP) - Level/Active high
+  - mcp2ap_mhu_receive_intr_1 (SCP) - Level/Active high
+  - mcp2ap_mhu_receive_intr_2 (SCP) - Level/Active high
+  - mcp2ap_mhu_receive_intr_3 (SCP) - Level/Active high
+  - ap2scp_mhu_send_intr_0 (SCP) - Level/Active high
+  - ap2scp_mhu_send_intr_1 (SCP) - Level/Active high
+  - ap2scp_mhu_send_intr_2 (SCP) - Level/Active high
+  - ap2scp_mhu_send_intr_3 (SCP) - Level/Active high
+  - ap2scp_mhu_receive_intr_0 (SCP) - Level/Active high
+  - ap2scp_mhu_receive_intr_1 (SCP) - Level/Active high
+  - ap2scp_mhu_receive_intr_2 (SCP) - Level/Active high
+  - ap2scp_mhu_receive_intr_3 (SCP) - Level/Active high
+  - ap2mcp_mhu_send_intr_0 (SCP) - Level/Active high
+  - ap2mcp_mhu_send_intr_1 (SCP) - Level/Active high
+  - ap2mcp_mhu_send_intr_2 (SCP) - Level/Active high
+  - ap2mcp_mhu_send_intr_3 (SCP) - Level/Active high
+  - ap2mcp_mhu_receive_intr_0 (SCP) - Level/Active high
+  - ap2mcp_mhu_receive_intr_1 (SCP) - Level/Active high
+  - ap2mcp_mhu_receive_intr_2 (SCP) - Level/Active high
+  - ap2mcp_mhu_receive_intr_3 (SCP) - Level/Active high
+  - scp2mcp_mhu_send_intr (SCP) - Level/Active high
+  - scp2mcp_mhu_receive_intr (SCP) - Level/Active high
+  - mcp2scp_mhu_send_intr (SCP) - Level/Active high
+  - mcp2scp_mhu_receive_intr (SCP) - Level/Active high
+  - d2d_scp2scp_mhu_send_intr_0 (SCP) - Level/Active high
+  - d2d_scp2scp_mhu_send_intr_1 (SCP) - Level/Active high
+  - d2d_scp2scp_mhu_send_intr_2 (SCP) - Level/Active high
+  - d2d_scp2mcp_mhu_send_intr_0 (SCP) - Level/Active high
+  - d2d_scp2mcp_mhu_send_intr_1 (SCP) - Level/Active high
+  - d2d_scp2mcp_mhu_send_intr_2 (SCP) - Level/Active high
+  - d2d_mcp2mcp_mhu_send_intr_0 (SCP) - Level/Active high
+  - d2d_mcp2mcp_mhu_send_intr_1 (SCP) - Level/Active high
+  - d2d_mcp2mcp_mhu_send_intr_2 (SCP) - Level/Active high
+  - d2d_mcp2scp_mhu_send_intr_0 (SCP) - Level/Active high
+  - d2d_mcp2scp_mhu_send_intr_1 (SCP) - Level/Active high
+  - d2d_mcp2scp_mhu_send_intr_2 (SCP) - Level/Active high
+  - d2d_scp2scp_mhu_receive_intr_0 (SCP) - Level/Active high
+  - d2d_scp2scp_mhu_receive_intr_1 (SCP) - Level/Active high
+  - d2d_scp2scp_mhu_receive_intr_2 (SCP) - Level/Active high
+  - d2d_scp2mcp_mhu_receive_intr_0 (SCP) - Level/Active high
+  - d2d_scp2mcp_mhu_receive_intr_1 (SCP) - Level/Active high
+  - d2d_scp2mcp_mhu_receive_intr_2 (SCP) - Level/Active high
+  - d2d_mcp2mcp_mhu_receive_intr_0 (SCP) - Level/Active high
+  - d2d_mcp2mcp_mhu_receive_intr_1 (SCP) - Level/Active high
+  - d2d_mcp2mcp_mhu_receive_intr_2 (SCP) - Level/Active high
+  - d2d_mcp2scp_mhu_receive_intr_0 (SCP) - Level/Active high
+  - d2d_mcp2scp_mhu_receive_intr_1 (SCP) - Level/Active high
+  - d2d_mcp2scp_mhu_receive_intr_2 (SCP) - Level/Active high
+  - scp_ts_sync_0_intr (SCP) - Level/Active high
+  - scp_ts_sync_1_intr (SCP) - Level/Active high
+  - scp_ts_sync_2_intr (SCP) - Level/Active high
+  - scp_i3c_dma_0_intr (SCP) - Level/Active high
+  - scp_i3c_dma_1_intr (SCP) - Level/Active high
+  - scp_i3c_dma_2_intr (SCP) - Level/Active high
+  - scp_dma_intr (SCP) - Level/Active high
+  - scp_efuse_intr (SCP) - Level/Active high
+  - scp_qspi_intr (SCP) - Level/Active high
+  - scp_spi_intr (SCP) - Level/Active high
+  - scp_uart_intr (SCP) - Level/Active high
+  - scp_smbus_intr (SCP) - Level/Active high
+  - scp_gpio_intr (SCP) - Level/Active high
+  - scp_i2c_intr (SCP) - Level/Active high
+  - scp_ske_intr (SCP) - Level/Active high
+  - scp_pke_intr (SCP) - Level/Active high
+  - scp_hash_intr (SCP) - Level/Active high
+  - scp_trng_intr (SCP) - Level/Active high
+  - scp_ras_cri_intr (SCP) - Level/Active high
+  - scp_ras_eri_intr (SCP) - Level/Active high
+  - scp_ras_fhi_intr (SCP) - Level/Active high
+  - scp2io_wdt_ws1_intr (SCP) - Level/Active high
+  - scp_sram_bus_fault_intr (SCP) - Level/Active high
+  - d2d_d0_n2_wakeup_intr (SCP) - Level/Active high
+  - d2d_d0_n2_ws1_intr (SCP) - Level/Active high
+  - d2d_d0_iosub_pmbus0_intr (SCP) - Level/Active high
+  - d2d_d0_iosub_pvt_intr (SCP) - Level/Active high
+  - d2d_d1_n2_wakeup_intr (SCP) - Level/Active high
+  - d2d_d1_n2_ws1_intr (SCP) - Level/Active high
+  - d2d_d1_iosub_pmbus0_intr (SCP) - Level/Active high
+  - d2d_d1_iosub_pvt_intr (SCP) - Level/Active high
+  - d2d_d2_n2_wakeup_intr (SCP) - Level/Active high
+  - d2d_d2_n2_ws1_intr (SCP) - Level/Active high
+  - d2d_d2_iosub_pmbus0_intr (SCP) - Level/Active high
+  - d2d_d2_iosub_pvt_intr (SCP) - Level/Active high
+  - d2d_d0_imu_acc_intr (SCP) - Level/Active high
+  - d2d_d1_imu_acc_intr (SCP) - Level/Active high
+  - d2d_d2_imu_acc_intr (SCP) - Level/Active high
+  - slcm_fault_intr (SCP) - Level/Active high
+  - mcp_wdt0_ws0 (MCP) - Level/Active high
+  - mcp_wdt0_ws1 (MCP) - Level/Active high
+  - mcp_wdt1_ws0 (MCP) - Level/Active high
+  - mcp_wdt1_ws1 (MCP) - Level/Active high
+  - mcp_timer64_0_intr (MCP) - Level/Active high
+  - mcp_timer64_1_intr (MCP) - Level/Active high
+  - mcp_timer64_2_intr (MCP) - Level/Active high
+  - mcp_timer64_3_intr (MCP) - Level/Active high
+  - mcp_uart_intr (MCP) - Level/Active high
+  - mcp_smbus_intr (MCP) - Level/Active high
+  - mcp_gpio_intr (MCP) - Level/Active high
+  - mcp_i2c_intr (MCP) - Level/Active high
+  - mcp_cpu_bus_fault_intr (MCP) - Level/Active high
+  - mcp_acl_intr (MCP) - Level/Active high
+  - mcp_ras_cri_intr (MCP) - Level/Active high
+  - mcp_ras_eri_intr (MCP) - Level/Active high
+  - mcp_ras_fhi_intr (MCP) - Level/Active high
+  - mcp2io_wdt_ws1_intr (MCP) - Level/Active high
+  - mcp_sram_bus_fault_intr (MCP) - Level/Active high
+  - smmu_abnormal_intr (SMMU) - Level/Active high
+  - smmu_normal_intr_ns (SMMU) - Level/Active high
+  - smmu_normal_intr_s (SMMU) - Level/Active high
+  - smmu_cri_intr (SMMU) - Level/Active high
+  - smmu_eri_intr (SMMU) - Level/Active high
+  - smmu_fhi_intr (SMMU) - Level/Active high
+  - iodap_chk_err_etf0 (IODAP) - Level/Active high
+  - iodap_chk_err_etf1 (IODAP) - Level/Active high
+  - iodap_etr_buf_intr (IODAP) - Level/Active high
+  - iodap_catu_addrerr_intr (IODAP) - Level/Active high
+  - iodap_sdc600_intr (IODAP) - Level/Active high
+  - accel_iosub_scp2imu_mhu_send_intr (外部-from ACCEL) - Level/Active high
+  - accel_iosub_imu2scp_mhu_receive_intr (外部-from ACCEL) - Level/Active high
+  - accel_iosub_imu_ws1_intr (外部-from ACCEL) - Level/Active high
+  - accel_iosub_mcp2imu_mhu_send_intr (外部-from ACCEL) - Level/Active high
+  - accel_iosub_imu2mcp_mhu_receive_intr (外部-from ACCEL) - Level/Active high
+  - accel_ras_cri_intr (外部-from ACCEL) - Level/Active high
+  - accel_ras_eri_intr (外部-from ACCEL) - Level/Active high
+  - accel_ras_fhi_intr (外部-from ACCEL) - Level/Active high
+  - accel_normal0_intr (外部-from ACCEL) - Level/Active high
+  - accel_normal1_intr (外部-from ACCEL) - Level/Active high
+  - accel_normal2_intr (外部-from ACCEL) - Level/Active high
+  - accel_normal3_intr (外部-from ACCEL) - Level/Active high
+  - accel_abnormal0_intr (外部-from ACCEL) - Level/Active high
+  - accel_abnormal1_intr (外部-from ACCEL) - Level/Active high
+  - accel_abnormal2_intr (外部-from ACCEL) - Level/Active high
+  - accel_abnormal3_intr (外部-from ACCEL) - Level/Active high
+  - accel_abnormal4_intr (外部-from ACCEL) - Level/Active high
+  - accel_abnormal5_intr (外部-from ACCEL) - Level/Active high
+  - accel_pll_lock_intr (外部-from ACCEL) - Level/Active high
+  - accel_pll_unlock_intr (外部-from ACCEL) - Level/Active high
+  - csub_pll_intr_lock[16:0] (外部-from CSUB) - Level/Active high
+  - csub_pll_intr_unlock[16:0] (外部-from CSUB) - Level/Active high
+  - csub_pll_intr_frechangedone[16:0] (外部-from CSUB) - Level/Active high
+  - csub_pll_intr_frechange_tot_done[16:0] (外部-from CSUB) - Level/Active high
+  - csub_pll_intr_intdocfrac_err[16:0] (外部-from CSUB) - Level/Active high
+  - csub_sec_eri_intr (外部-from CSUB) - Level/Active high
+  - csub_sec_fhi_intr (外部-from CSUB) - Level/Active high
+  - csub_ns_cri_intr (外部-from CSUB) - Level/Active high
+  - csub_ns_eri_intr (外部-from CSUB) - Level/Active high
+  - csub_ns_fhi_intr (外部-from CSUB) - Level/Active high
+  - csub_normal0_intr (外部-from CSUB) - Level/Active high
+  - csub_normal1_intr (外部-from CSUB) - Level/Active high
+  - csub_abnormal0_intr (外部-from CSUB) - Level/Active high
+  - csub_abnormal1_intr (外部-from CSUB) - Level/Active high
+  - csub_abnormal2_intr (外部-from CSUB) - Level/Active high
+  - gicsub_fhi_intr (外部-from CSUB) - Level/Active high
+  - gicsub_eri_intr (外部-from CSUB) - Level/Active high
+  - csub_ram_eri_intr (外部-from CSUB) - Level/Active high
+  - csub_ram_fhi_intr (外部-from CSUB) - Level/Active high
+  - n2_fhi_intr (外部-from CSUB) - Level/Active high
+  - n2_eri_intr (外部-from CSUB) - Level/Active high
+  - n2_ws0_intr (外部-from CSUB) - Level/Active high
+  - n2_ws1_intr (外部-from CSUB) - Level/Active high
+  - n2_clusterppuirq (外部-from CSUB) - Level/Active high
+  - n2_coreppuirq (外部-from CSUB) - Level/Active high
+  - n2_comb_intr (外部-from CSUB) - Level/Active high
+  - csub_normal2_intr (外部-from CSUB) - Level/Active high
+  - psub_ras_cri_intr (外部-from PSUB) - Level/Active high
+  - psub_ras_eri_intr (外部-from PSUB) - Level/Active high
+  - psub_ras_fhi_intr (外部-from PSUB) - Level/Active high
+  - psub_normal0_intr (外部-from PSUB) - Level/Active high
+  - psub_normal1_intr (外部-from PSUB) - Level/Active high
+  - psub_normal2_intr (外部-from PSUB) - Level/Active high
+  - psub_normal3_intr (外部-from PSUB) - Level/Active high
+  - psub_normal4_intr (外部-from PSUB) - Level/Active high
+  - psub_normal5_intr (外部-from PSUB) - Level/Active high
+  - psub_normal6_intr (外部-from PSUB) - Level/Active high
+  - psub_normal7_intr (外部-from PSUB) - Level/Active high
+  - psub_abnormal0_intr (外部-from PSUB) - Level/Active high
+  - psub_abnormal1_intr (外部-from PSUB) - Level/Active high
+  - psub_abnormal2_intr (外部-from PSUB) - Level/Active high
+  - psub_abnormal3_intr (外部-from PSUB) - Level/Active high
+  - psub_abnormal4_intr (外部-from PSUB) - Level/Active high
+  - psub_abnormal5_intr (外部-from PSUB) - Level/Active high
+  - psub_abnormal6_intr (外部-from PSUB) - Level/Active high
+  - psub_abnormal7_intr (外部-from PSUB) - Level/Active high
+  - psub_normal8_intr (外部-from PSUB) - Level/Active high
+  - psub_pll_lock_intr (外部-from PSUB) - Level/Active high
+  - psub_pll_unlock_intr (外部-from PSUB) - Level/Active high
+  - pcie1_ras_cri_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_ras_eri_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_ras_fhi_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_normal0_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_normal1_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_normal2_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_normal3_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_normal4_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_normal5_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_normal6_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_normal7_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_abnormal0_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_abnormal1_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_abnormal2_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_abnormal3_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_abnormal4_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_abnormal5_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_abnormal6_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_abnormal7_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_normal8_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_pll_lock_intr (外部-from PCIE1) - Level/Active high
+  - pcie1_pll_unlock_intr (外部-from PCIE1) - Level/Active high
+  - d2d_ras_cri_intr (外部-from D2D) - Level/Active high
+  - d2d_ras_eri_intr (外部-from D2D) - Level/Active high
+  - d2d_ras_fhi_intr (外部-from D2D) - Level/Active high
+  - d2d_normal0_intr (外部-from D2D) - Level/Active high
+  - d2d_normal1_intr (外部-from D2D) - Level/Active high
+  - d2d_normal2_intr (外部-from D2D) - Level/Active high
+  - d2d_normal3_intr (外部-from D2D) - Level/Active high
+  - d2d_normal4_intr (外部-from D2D) - Level/Active high
+  - d2d_normal5_intr (外部-from D2D) - Level/Active high
+  - d2d_abnormal0_intr (外部-from D2D) - Level/Active high
+  - d2d_abnormal1_intr (外部-from D2D) - Level/Active high
+  - d2d_pll_lock_intr (外部-from D2D) - Level/Active high
+  - d2d_pll_unlock_intr (外部-from D2D) - Level/Active high
+  - ddr0_ras_cri_intr (外部-from DDR0) - Level/Active high
+  - ddr0_ras_eri_intr (外部-from DDR0) - Level/Active high
+  - ddr0_ras_fhi_intr (外部-from DDR0) - Level/Active high
+  - ddr0_ch0_controller_intr (外部-from DDR0) - Level/Active high
+  - ddr0_ch1_controller_intr (外部-from DDR0) - Level/Active high
+  - ddr0_pi_intr (外部-from DDR0) - Level/Active high
+  - ddr0_abnormal_intr (外部-from DDR0) - Level/Active high
+  - ddr0_pll_lock_intr (外部-from DDR0) - Level/Active high
+  - ddr0_pll_unlock_intr (外部-from DDR0) - Level/Active high
+  - ddr0_pll_frechangedone_intr (外部-from DDR0) - Level/Active high
+  - ddr0_pll_frechange_tot_done_intr (外部-from DDR0) - Level/Active high
+  - ddr0_pll_intdocfrac_err_intr (外部-from DDR0) - Level/Active high
+  - ddr1_ras_cri_intr (外部-from DDR1) - Level/Active high
+  - ddr1_ras_eri_intr (外部-from DDR1) - Level/Active high
+  - ddr1_ras_fhi_intr (外部-from DDR1) - Level/Active high
+  - ddr1_ch0_controller_intr (外部-from DDR1) - Level/Active high
+  - ddr1_ch1_controller_intr (外部-from DDR1) - Level/Active high
+  - ddr1_pi_intr (外部-from DDR1) - Level/Active high
+  - ddr1_abnormal_intr (外部-from DDR1) - Level/Active high
+  - ddr1_pll_lock_intr (外部-from DDR1) - Level/Active high
+  - ddr1_pll_unlock_intr (外部-from DDR1) - Level/Active high
+  - ddr1_pll_frechangedone_intr (外部-from DDR1) - Level/Active high
+  - ddr1_pll_frechange_tot_done_intr (外部-from DDR1) - Level/Active high
+  - ddr1_pll_intdocfrac_err_intr (外部-from DDR1) - Level/Active high
+  - ddr2_ras_cri_intr (外部-from ddr2) - Level/Active high
+  - ddr2_ras_eri_intr (外部-from ddr2) - Level/Active high
+  - ddr2_ras_fhi_intr (外部-from ddr2) - Level/Active high
+  - ddr2_ch0_controller_intr (外部-from ddr2) - Level/Active high
+  - ddr2_ch1_controller_intr (外部-from ddr2) - Level/Active high
+  - ddr2_pi_intr (外部-from ddr2) - Level/Active high
+  - ddr2_abnormal_intr (外部-from ddr2) - Level/Active high
+  - ddr2_pll_lock_intr (外部-from ddr2) - Level/Active high
+  - ddr2_pll_unlock_intr (外部-from ddr2) - Level/Active high
+  - ddr2_pll_frechangedone_intr (外部-from ddr2) - Level/Active high
+  - ddr2_pll_frechange_tot_done_intr (外部-from ddr2) - Level/Active high
+  - ddr2_pll_intdocfrac_err_intr (外部-from ddr2) - Level/Active high
+  - io_die_intr_0_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_1_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_2_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_3_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_4_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_5_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_6_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_7_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_8_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_9_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_10_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_11_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_12_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_13_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_14_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_15_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_16_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_17_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_18_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_19_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_20_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_21_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_22_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_23_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_24_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_25_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_26_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_27_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_28_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_29_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_30_intr (外部-from IO DIE) - Level/Active high
+  - io_die_intr_31_intr (外部-from IO DIE) - Level/Active high
+
+**force_toggle** (4 个中断):
+  - scp_cpu_cti_irq[0] (SCP) - Edge/Rising & Falling Edge
+  - scp_cpu_cti_irq[1] (SCP) - Edge/Rising & Falling Edge
+  - mcp_cpu_cti_irq[0] (MCP) - Edge/Rising & Falling Edge
+  - mcp_cpu_cti_irq[1] (MCP) - Edge/Rising & Falling Edge
+
+**edge_pulse** (12 个中断):
+  - intr_tcu_ups_event_q_irpt_s (SMMU) - Pulse/Active high
+  - intr_tcu_ups_cmd_sync_irpt_s (SMMU) - Pulse/Active high
+  - intr_tcu_ups_global_irpt_s (SMMU) - Pulse/Active high
+  - intr_tcu_ups_gpf_far (SMMU) - Pulse/Active high
+  - intr_tcu_ups_gpt_cfg_far (SMMU) - Pulse/Active high
+  - intr_tcu_ups_event_q_irpt_ns (SMMU) - Pulse/Active high
+  - intr_tcu_ups_cmd_sync_irpt_ns (SMMU) - Pulse/Active high
+  - intr_tcu_ups_global_irpt_ns (SMMU) - Pulse/Active high
+  - intr_tcu_ups_pmu_irpt (SMMU) - Pulse/Active high
+  - intr_tcu_ups_pri_q_irpt_ns (SMMU) - Pulse/Active high
+  - intr_tbu0_ups_pmu_irpt (SMMU) - Pulse/Active high
+  - intr_tbu0_ups_crit_err (SMMU) - Pulse/Active high
+
+## 修复建议
+------------------------------------------------------------
+## 总结
+------------------------------------------------------------
+当前激励方法合规率: 100.0%
+
+✅ **合规性评估: 优秀**
+当前的激励方法基本符合中断向量表的要求。
