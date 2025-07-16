@@ -18,7 +18,7 @@ echo "✓ 找到 int_vector.xlsx 文件"
 # 2. 运行转换脚本
 echo
 echo "2. 运行Excel转换脚本..."
-python3 convert_xlsx_to_sv.py int_vector.xlsx -o seq/int_map_entries.svh
+python3 tools/convert_xlsx_to_sv.py int_vector.xlsx -o seq/int_map_entries.svh
 
 if [ $? -eq 0 ]; then
     echo "✓ 转换成功完成"
@@ -65,7 +65,7 @@ fi
 # 6. 运行系统测试
 echo
 echo "6. 运行系统测试..."
-python3 test_new_system.py
+python3 tools/test_new_system.py
 
 if [ $? -eq 0 ]; then
     echo "✓ 系统测试通过"
@@ -86,7 +86,7 @@ echo "🎉 Excel转换系统使用示例完成！"
 echo
 echo "使用说明:"
 echo "1. 修改 int_vector.xlsx 文件中的中断信息"
-echo "2. 运行: python3 convert_xlsx_to_sv.py int_vector.xlsx"
+echo "2. 运行: python3 tools/convert_xlsx_to_sv.py int_vector.xlsx"
 echo "3. 生成的 seq/int_map_entries.svh 会自动更新"
 echo "4. seq/int_routing_model.sv 主文件保持不变"
-echo "5. 运行: python3 test_new_system.py 验证结果"
+echo "5. 运行: python3 tools/test_new_system.py 验证结果"

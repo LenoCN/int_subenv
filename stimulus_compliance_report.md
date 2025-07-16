@@ -4,110 +4,12 @@
 
 ## 统计摘要
 总中断数量: 423
-符合规范 (总计): 407 (96.2%)
+符合规范 (总计): 423 (100.0%)
   - 精确匹配: 0 (0.0%)
-  - 通用方法: 407 (96.2%)
+  - 通用方法: 423 (100.0%)
 不符合规范: 0 (0.0%)
-缺少激励方法: 16 (3.8%)
+缺少激励方法: 0 (0.0%)
 无法确定要求: 0 (0.0%)
-
-## 缺少激励方法的中断
-------------------------------------------------------------
-中断名称: scp_cpu_cti_irq[0]
-  组别: SCP
-  触发类型: Edge
-  极性: Rising & Falling Edge
-  需要的激励方法: force_toggle
-
-中断名称: scp_cpu_cti_irq[1]
-  组别: SCP
-  触发类型: Edge
-  极性: Rising & Falling Edge
-  需要的激励方法: force_toggle
-
-中断名称: mcp_cpu_cti_irq[0]
-  组别: MCP
-  触发类型: Edge
-  极性: Rising & Falling Edge
-  需要的激励方法: force_toggle
-
-中断名称: mcp_cpu_cti_irq[1]
-  组别: MCP
-  触发类型: Edge
-  极性: Rising & Falling Edge
-  需要的激励方法: force_toggle
-
-中断名称: intr_tcu_ups_event_q_irpt_s
-  组别: SMMU
-  触发类型: Pulse
-  极性: Active high
-  需要的激励方法: edge_pulse
-
-中断名称: intr_tcu_ups_cmd_sync_irpt_s
-  组别: SMMU
-  触发类型: Pulse
-  极性: Active high
-  需要的激励方法: edge_pulse
-
-中断名称: intr_tcu_ups_global_irpt_s
-  组别: SMMU
-  触发类型: Pulse
-  极性: Active high
-  需要的激励方法: edge_pulse
-
-中断名称: intr_tcu_ups_gpf_far
-  组别: SMMU
-  触发类型: Pulse
-  极性: Active high
-  需要的激励方法: edge_pulse
-
-中断名称: intr_tcu_ups_gpt_cfg_far
-  组别: SMMU
-  触发类型: Pulse
-  极性: Active high
-  需要的激励方法: edge_pulse
-
-中断名称: intr_tcu_ups_event_q_irpt_ns
-  组别: SMMU
-  触发类型: Pulse
-  极性: Active high
-  需要的激励方法: edge_pulse
-
-中断名称: intr_tcu_ups_cmd_sync_irpt_ns
-  组别: SMMU
-  触发类型: Pulse
-  极性: Active high
-  需要的激励方法: edge_pulse
-
-中断名称: intr_tcu_ups_global_irpt_ns
-  组别: SMMU
-  触发类型: Pulse
-  极性: Active high
-  需要的激励方法: edge_pulse
-
-中断名称: intr_tcu_ups_pmu_irpt
-  组别: SMMU
-  触发类型: Pulse
-  极性: Active high
-  需要的激励方法: edge_pulse
-
-中断名称: intr_tcu_ups_pri_q_irpt_ns
-  组别: SMMU
-  触发类型: Pulse
-  极性: Active high
-  需要的激励方法: edge_pulse
-
-中断名称: intr_tbu0_ups_pmu_irpt
-  组别: SMMU
-  触发类型: Pulse
-  极性: Active high
-  需要的激励方法: edge_pulse
-
-中断名称: intr_tbu0_ups_crit_err
-  组别: SMMU
-  触发类型: Pulse
-  极性: Active high
-  需要的激励方法: edge_pulse
 
 ## 符合规范的中断
 ------------------------------------------------------------
@@ -523,59 +425,31 @@
   - io_die_intr_30_intr (外部-from IO DIE) - Level/Active high
   - io_die_intr_31_intr (外部-from IO DIE) - Level/Active high
 
+**force_toggle** (4 个中断):
+  - scp_cpu_cti_irq[0] (SCP) - Edge/Rising & Falling Edge
+  - scp_cpu_cti_irq[1] (SCP) - Edge/Rising & Falling Edge
+  - mcp_cpu_cti_irq[0] (MCP) - Edge/Rising & Falling Edge
+  - mcp_cpu_cti_irq[1] (MCP) - Edge/Rising & Falling Edge
+
+**edge_pulse** (12 个中断):
+  - intr_tcu_ups_event_q_irpt_s (SMMU) - Pulse/Active high
+  - intr_tcu_ups_cmd_sync_irpt_s (SMMU) - Pulse/Active high
+  - intr_tcu_ups_global_irpt_s (SMMU) - Pulse/Active high
+  - intr_tcu_ups_gpf_far (SMMU) - Pulse/Active high
+  - intr_tcu_ups_gpt_cfg_far (SMMU) - Pulse/Active high
+  - intr_tcu_ups_event_q_irpt_ns (SMMU) - Pulse/Active high
+  - intr_tcu_ups_cmd_sync_irpt_ns (SMMU) - Pulse/Active high
+  - intr_tcu_ups_global_irpt_ns (SMMU) - Pulse/Active high
+  - intr_tcu_ups_pmu_irpt (SMMU) - Pulse/Active high
+  - intr_tcu_ups_pri_q_irpt_ns (SMMU) - Pulse/Active high
+  - intr_tbu0_ups_pmu_irpt (SMMU) - Pulse/Active high
+  - intr_tbu0_ups_crit_err (SMMU) - Pulse/Active high
+
 ## 修复建议
 ------------------------------------------------------------
-### 对于缺少激励方法的中断:
-
-**Edge / Rising & Falling Edge** (4 个中断):
-  需要实现双边沿激励方法:
-  ```systemverilog
-  // 双边沿激励示例
-  uvm_hdl_force(info.rtl_path_src, 1);
-  #5ns;
-  uvm_hdl_force(info.rtl_path_src, 0);
-  #5ns;
-  uvm_hdl_release(info.rtl_path_src);
-  ```
-  - scp_cpu_cti_irq[0] (SCP)
-  - scp_cpu_cti_irq[1] (SCP)
-  - mcp_cpu_cti_irq[0] (MCP)
-  - mcp_cpu_cti_irq[1] (MCP)
-
-**Pulse / Active high** (12 个中断):
-  需要实现脉冲激励方法:
-  ```systemverilog
-  // 脉冲激励示例
-  uvm_hdl_force(info.rtl_path_src, 1);
-  #1ns; // 短脉冲
-  uvm_hdl_force(info.rtl_path_src, 0);
-  #1ns;
-  uvm_hdl_release(info.rtl_path_src);
-  ```
-  - intr_tcu_ups_event_q_irpt_s (SMMU)
-  - intr_tcu_ups_cmd_sync_irpt_s (SMMU)
-  - intr_tcu_ups_global_irpt_s (SMMU)
-  - intr_tcu_ups_gpf_far (SMMU)
-  - intr_tcu_ups_gpt_cfg_far (SMMU)
-  - intr_tcu_ups_event_q_irpt_ns (SMMU)
-  - intr_tcu_ups_cmd_sync_irpt_ns (SMMU)
-  - intr_tcu_ups_global_irpt_ns (SMMU)
-  - intr_tcu_ups_pmu_irpt (SMMU)
-  - intr_tcu_ups_pri_q_irpt_ns (SMMU)
-  - intr_tbu0_ups_pmu_irpt (SMMU)
-  - intr_tbu0_ups_crit_err (SMMU)
-
-通用建议:
-1. 需要在测试序列中添加对这些中断的激励
-2. 确保在int_routing_model.sv中设置正确的rtl_path_src
-3. 根据trigger/polarity类型选择合适的激励方法
-
 ## 总结
 ------------------------------------------------------------
-当前激励方法合规率: 96.2%
+当前激励方法合规率: 100.0%
 
 ✅ **合规性评估: 优秀**
 当前的激励方法基本符合中断向量表的要求。
-
-主要问题: 有 16 个中断缺少专门的激励方法。
-建议优先实现Edge/Pulse类型中断的专用激励方法。
