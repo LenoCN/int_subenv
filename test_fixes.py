@@ -8,39 +8,52 @@ import re
 import sys
 
 def test_handshake_mechanism():
-    """测试握手机制修复"""
-    print("🔍 测试握手机制修复...")
-    
-    # 检查monitor中的静态方法
+    """测试握手机制修复 - UVM最佳实践"""
+    print("🔍 测试握手机制修复 - UVM最佳实践...")
+
+    # 检查monitor中不应该有静态方法供sequence调用
     with open('env/int_monitor.sv', 'r') as f:
         monitor_content = f.read()
-    
+
     if 'static task wait_for_interrupt_detection_event' in monitor_content:
-        print("  ✅ int_monitor.sv: 静态等待方法已添加")
-    else:
-        print("  ❌ int_monitor.sv: 静态等待方法缺失")
+        print("  ❌ int_monitor.sv: 不应该有静态方法供sequence调用 (违反UVM最佳实践)")
         return False
-    
-    # 检查sequence中的调用
+    else:
+        print("  ✅ int_monitor.sv: 正确移除了不合适的静态方法")
+
+    # 检查sequence中使用正确的base class方法
     with open('seq/int_lightweight_sequence.sv', 'r') as f:
         seq_content = f.read()
-    
+
     if 'int_monitor::wait_for_interrupt_detection_event' in seq_content:
-        print("  ✅ int_lightweight_sequence.sv: 使用正确的静态方法调用")
-    else:
-        print("  ❌ int_lightweight_sequence.sv: 静态方法调用缺失")
+        print("  ❌ int_lightweight_sequence.sv: 仍在直接调用monitor方法 (违反UVM最佳实践)")
         return False
-    
+    elif 'wait_for_interrupt_detection(info)' in seq_content:
+        print("  ✅ int_lightweight_sequence.sv: 正确使用base sequence的方法")
+    else:
+        print("  ❌ int_lightweight_sequence.sv: 等待方法调用缺失")
+        return False
+
+    # 检查base sequence中的正确实现
+    with open('seq/int_base_sequence.sv', 'r') as f:
+        base_content = f.read()
+
+    if 'task wait_for_interrupt_detection' in base_content and 'event_manager.wait_for_interrupt_detection' in base_content:
+        print("  ✅ int_base_sequence.sv: 正确实现了UVM架构的等待方法")
+    else:
+        print("  ❌ int_base_sequence.sv: 缺少正确的等待方法实现")
+        return False
+
     # 检查事件管理器中的wait_trigger
     with open('env/int_event_manager.sv', 'r') as f:
         event_content = f.read()
-    
+
     if 'wait_trigger()' in event_content:
         print("  ✅ int_event_manager.sv: wait_trigger调用存在")
     else:
         print("  ❌ int_event_manager.sv: wait_trigger调用缺失")
         return False
-    
+
     return True
 
 def test_sequencer_paths():
@@ -134,7 +147,7 @@ def main():
     print("=" * 50)
     
     tests = [
-        ("握手机制", test_handshake_mechanism),
+        ("UVM最佳实践握手机制", test_handshake_mechanism),
         ("Sequencer路径", test_sequencer_paths),
         ("Driver架构", test_driver_architecture),
         ("Stimulus Item", test_stimulus_item)

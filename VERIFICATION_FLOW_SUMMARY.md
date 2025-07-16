@@ -52,17 +52,17 @@ int_scoreboard ← int_monitor ← RTL信号监控 ← 中断传播
 
 ### ✅ 已修复的Bug
 
-#### 1. 握手机制不完整
-**问题**: 缺少静态等待方法导致sequence无法正确等待中断检测
-**修复**: 在 `int_monitor.sv` 中添加了 `wait_for_interrupt_detection_event` 静态方法
+#### 1. UVM架构违规 - Sequence直接调用Monitor方法
+**问题**: Sequence直接调用monitor的静态方法违反UVM分层架构最佳实践
+**修复**: 移除monitor中不合适的静态方法，sequence通过base_sequence的方法使用event_manager
 
 #### 2. 测试用例架构不一致  
 **问题**: 多个测试用例使用错误的sequencer路径 `env.agent.sequencer`
 **修复**: 统一修改为正确路径 `env.m_sequencer`
 
 #### 3. Sequence等待方法调用错误
-**问题**: sequence中直接调用不存在的实例方法
-**修复**: 修改为调用正确的静态方法 `int_monitor::wait_for_interrupt_detection_event`
+**问题**: sequence中直接调用monitor方法违反UVM最佳实践
+**修复**: 修改为使用base_sequence的 `wait_for_interrupt_detection` 方法，通过event_manager实现正确的分层通信
 
 ### ⚠️ 需要关注的潜在问题
 

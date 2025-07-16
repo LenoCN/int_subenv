@@ -82,8 +82,8 @@ class int_lightweight_sequence extends int_base_sequence;
         finish_item(stim_item);
 
         `uvm_info(get_type_name(), $sformatf("Waiting for detection of interrupt: %s", info.name), UVM_HIGH)
-        // Wait for interrupt to be detected by monitor
-        int_monitor::wait_for_interrupt_detection_event(info);
+        // Wait for interrupt to be detected by monitor using proper UVM approach
+        wait_for_interrupt_detection(info);
 
         // Send clear command to driver (simulates software clearing)
         `uvm_info(get_type_name(), $sformatf("Creating CLEAR stimulus for interrupt: %s", info.name), UVM_HIGH)
@@ -171,7 +171,7 @@ class int_lightweight_sequence extends int_base_sequence;
 
         // Wait for merge interrupt to be detected
         `uvm_info(get_type_name(), $sformatf("Waiting for detection of merge interrupt: %s", merge_info.name), UVM_HIGH)
-        int_monitor::wait_for_interrupt_detection_event(merge_info);
+        wait_for_interrupt_detection(merge_info);
 
         // Clear the source interrupt
         `uvm_info(get_type_name(), $sformatf("Creating CLEAR stimulus for source interrupt: %s", source_info.name), UVM_HIGH)
@@ -239,7 +239,7 @@ class int_lightweight_sequence extends int_base_sequence;
         // Wait for merge interrupt to be detected
         `uvm_info(get_type_name(), $sformatf("Waiting for detection of merge interrupt: %s from multiple sources",
                  merge_info.name), UVM_HIGH)
-        int_monitor::wait_for_interrupt_detection_event(merge_info);
+        wait_for_interrupt_detection(merge_info);
 
         // Clear all source interrupts
         `uvm_info(get_type_name(), "Clearing all source interrupts", UVM_MEDIUM)
