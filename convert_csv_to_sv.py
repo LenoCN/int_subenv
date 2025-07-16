@@ -62,15 +62,15 @@ def parse_interrupt_csv(input_path, output_path):
         with open(input_path, 'r', encoding='utf-8-sig') as csvfile:
             reader = csv.reader(csvfile)
             header = next(reader) # Skip header
-
             current_sv_group = ""
 
-            for row in reader:
-                if not any(field.strip() for field in row) or len(row) < 13: continue
+            for row_num, row in enumerate(reader):
+                if not any(field.strip() for field in row) or len(row) < 13:
+                    continue
 
                 # Check for group header row
-                if not row[0].strip() and "中断源" in row[1]:
-                    csv_group_name = row[1].strip()
+                if "中断源" in row[0] and not row[1].strip():
+                    csv_group_name = row[0].strip()
                     if csv_group_name in GROUP_MAP:
                         current_sv_group = GROUP_MAP[csv_group_name]
                         sv_lines.append(f"\n        // --- Start of {current_sv_group} interrupts ---")
@@ -91,16 +91,16 @@ def parse_interrupt_csv(input_path, output_path):
                 to_imu = 1 if 'Y' in row[10].upper() or 'P' in row[10].upper() else 0
                 to_io = 1 if 'Y' in row[11].upper() or 'P' in row[11].upper() else 0
                 to_other_die = 1 if 'Y' in row[12].upper() or 'P' in row[12].upper() else 0
-                
+
                 # Sanitize name
                 name_sanitized = re.sub(r'(\s*\[\d+:\d+\]\s*)|(\s*\[\d+\]\s*)', '', name).strip()
                 name_sanitized = name_sanitized.replace(' ', '_')
-                
+
                 #Map trigger and polarity
                 trigger = TRIGGER_MAP.get(trigger_str, "UNKNOWN_TRIGGER")
                 if "Pulse" in trigger_str: trigger = "EDGE" # Treat Pulse as Edge
                 polarity = POLARITY_MAP.get(polarity_str, "UNKNOWN_POLARITY")
-                
+
                 # Construct the entry
                 entry_str = (
                     f"        entry = '{{name:\"{name_sanitized}\", "

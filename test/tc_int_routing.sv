@@ -9,14 +9,13 @@ class tc_int_routing extends int_tc_base;
     endfunction
 
     virtual task main_phase(uvm_phase phase);
-        int_routing_sequence seq;
+        int_lightweight_sequence seq;
         super.main_phase(phase);
         phase.raise_objection(this);
-        
-        seq = int_routing_sequence::type_id::create("seq");
-        // We run this sequence on a null sequencer since it uses direct HDL paths
-        // to force/read signals and does not require a driver.
-        seq.start(null);
+
+        seq = int_lightweight_sequence::type_id::create("seq");
+        // Use the new lightweight sequence with driver architecture
+        seq.start(env.m_sequencer);
 
         #5us;
         phase.drop_objection(this);

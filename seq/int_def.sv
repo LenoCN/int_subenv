@@ -36,16 +36,22 @@ typedef struct {
     // Destination routing information and check paths
     bit                  to_ap;
     string               rtl_path_ap;
+    int                  dest_index_ap;      // Index in destination interrupt vector
     bit                  to_scp;
     string               rtl_path_scp;
+    int                  dest_index_scp;     // Index in destination interrupt vector
     bit                  to_mcp;
     string               rtl_path_mcp;
+    int                  dest_index_mcp;     // Index in destination interrupt vector
     bit                  to_imu;
     string               rtl_path_imu;
+    int                  dest_index_imu;     // Index in destination interrupt vector
     bit                  to_io;
     string               rtl_path_io;
+    int                  dest_index_io;      // Index in destination interrupt vector
     bit                  to_other_die;
     string               rtl_path_other_die;
+    int                  dest_index_other_die; // Index in destination interrupt vector
 } interrupt_info_s;
 
 `endif // INT_DEF_SV
