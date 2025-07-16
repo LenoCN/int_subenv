@@ -22,7 +22,7 @@ class tc_merge_interrupt_test extends int_base_test;
         `uvm_info(get_type_name(), "Starting merge interrupt test", UVM_MEDIUM)
         
         seq = merge_interrupt_sequence::type_id::create("seq");
-        seq.start(env.agent.sequencer);
+        seq.start(env.m_sequencer);
         
         #5us; // Allow time for all checks to complete
         

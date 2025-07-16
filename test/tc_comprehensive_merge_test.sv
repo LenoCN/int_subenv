@@ -16,7 +16,7 @@ class tc_comprehensive_merge_test extends int_base_test;
         `uvm_info("TC_COMP_MERGE", "Starting comprehensive merge test with all implemented merge logic", UVM_MEDIUM)
         
         seq = comprehensive_merge_sequence::type_id::create("seq");
-        seq.start(env.agent.sequencer);
+        seq.start(env.m_sequencer);
         
         `uvm_info("TC_COMP_MERGE", "Completed comprehensive merge test", UVM_MEDIUM)
         

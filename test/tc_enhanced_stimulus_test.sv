@@ -17,7 +17,7 @@ class tc_enhanced_stimulus_test extends int_tc_base;
         `uvm_info(get_type_name(), "Starting enhanced stimulus test", UVM_MEDIUM)
         
         seq = enhanced_stimulus_sequence::type_id::create("seq");
-        seq.start(env.agent.sequencer);
+        seq.start(env.m_sequencer);
         
         #10us; // Allow time for all checks to complete
         

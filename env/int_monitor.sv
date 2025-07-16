@@ -129,7 +129,19 @@ class int_monitor extends uvm_monitor;
                   info.name, dest), UVM_HIGH)
     endtask
 
+    // Static method for sequences to wait for interrupt detection events
+    static task wait_for_interrupt_detection_event(interrupt_info_s info, int timeout_ns = 1000);
+        int_event_manager event_mgr;
 
+        // Get event manager from config database
+        if (!uvm_config_db#(int_event_manager)::get(null, "*", "event_manager", event_mgr)) begin
+            `uvm_error("INT_MONITOR", "Failed to get event manager from config database")
+            return;
+        end
+
+        // Use event manager to wait for detection
+        event_mgr.wait_for_interrupt_detection(info, timeout_ns);
+    endtask
 
 endclass
 
