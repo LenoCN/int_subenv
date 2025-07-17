@@ -8,7 +8,7 @@ module test_merge_logic;
     `include "seq/int_routing_model.sv"
     
     initial begin
-        interrupt_info_s sources[];
+        interrupt_info_s sources[$];
         int num_sources;
         
         $display("=== Testing Merge Interrupt Logic ===");
