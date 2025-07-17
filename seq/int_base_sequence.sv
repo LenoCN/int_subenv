@@ -7,9 +7,6 @@ class int_base_sequence extends uvm_sequence;
     // Event manager for interrupt detection handshake
     int_event_manager event_manager;
 
-    // Analysis port for sending expected interrupts to scoreboard
-    uvm_analysis_port #(int_exp_transaction) expected_port;
-
     function new(string name = "int_base_sequence");
         super.new(name);
     endfunction
@@ -26,10 +23,6 @@ class int_base_sequence extends uvm_sequence;
         end else begin
             `uvm_info(get_type_name(), "Successfully retrieved event_manager from config DB", UVM_HIGH)
         end
-
-        // Create analysis port for expected interrupts
-        expected_port = new("expected_port", this);
-        `uvm_info(get_type_name(), "Created analysis port for expected interrupts", UVM_DEBUG)
         
         `uvm_info(get_type_name(), "Interrupt sequence initialization completed", UVM_LOW)
     endtask
