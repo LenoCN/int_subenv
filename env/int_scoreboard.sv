@@ -5,9 +5,9 @@
 class int_exp_transaction extends uvm_sequence_item;
     interrupt_info_s interrupt_info;
 
-    `uvm_object_utils_begin(int_exp_transaction)
-        `uvm_field_object(interrupt_info, UVM_ALL_ON)
-    `uvm_object_utils_end
+    // Note: UVM field automation removed because interrupt_info_s is a struct, not a UVM object
+    // uvm_field_object can only be used with objects that extend uvm_object
+    `uvm_object_utils(int_exp_transaction)
 
     function new(string name = "int_exp_transaction");
         super.new(name);
