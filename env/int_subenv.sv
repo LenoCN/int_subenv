@@ -38,7 +38,7 @@ class int_subenv extends soc_base_subenv;
         m_monitor.item_collected_port.connect(m_coverage.analysis_export);
 
         // Connect sequencer to driver
-        m_sequencer.seq_item_port.connect(m_driver.seq_item_export);
+        m_driver.seq_item_port.connect(m_sequencer.seq_item_export);
     endfunction
 
 endclass
