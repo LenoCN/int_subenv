@@ -35,7 +35,13 @@ class int_base_sequence extends uvm_sequence;
     endtask
 
     // Helper task to wait for interrupt detection with configurable timeout
-    task wait_for_interrupt_detection(interrupt_info_s info, int timeout_ns = 1000);
+    task wait_for_interrupt_detection(interrupt_info_s info, int timeout_ns = -1);
+        // Use global timing config if no specific timeout provided
+        if (timeout_ns == -1) begin
+            init_timing_config();
+            timeout_ns = global_timing_config.detection_timeout_ns;
+        end
+
         `uvm_info(get_type_name(), $sformatf("Waiting for interrupt detection: %s (group: %s, index: %0d) with timeout %0d ns",
                  info.name, info.group.name(), info.index, timeout_ns), UVM_MEDIUM)
                  

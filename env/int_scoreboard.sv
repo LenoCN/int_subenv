@@ -111,17 +111,6 @@ class int_scoreboard extends uvm_scoreboard;
         end
     endfunction
     
-    // At the end of the test, check if any expected interrupts were NOT seen.
-    function void check_phase(uvm_phase phase);
-        super.check_phase(phase);
-        if (expected_interrupts.size() > 0) begin
-            `uvm_error(get_type_name(), $sformatf("Found %0d expected interrupts that were NEVER detected:", expected_interrupts.size()))
-            foreach (expected_interrupts[i]) begin
-                `uvm_info(get_type_name(), $sformatf(" - MISSING: %s", expected_interrupts[i]), UVM_NONE)
-            end
-        end
-    endfunction
-
     // Check for any remaining expected interrupts at the end of test
     virtual function void check_phase(uvm_phase phase);
         super.check_phase(phase);

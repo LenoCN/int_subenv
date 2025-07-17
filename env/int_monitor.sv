@@ -12,6 +12,9 @@ class int_monitor extends uvm_monitor;
     // Key format: "interrupt_name@destination"
     uvm_event_pool interrupt_detected_events;
 
+    // Timing configuration
+    timing_config timing_cfg;
+
     function new(string name = "int_monitor", uvm_component parent = null);
         super.new(name, parent);
         item_collected_port = new("item_collected_port", this);
@@ -28,6 +31,10 @@ class int_monitor extends uvm_monitor;
             `uvm_info(get_type_name(), "No event pool found in config DB, creating new one", UVM_MEDIUM)
             interrupt_detected_events = new("interrupt_detected_events");
         end
+
+        // Initialize timing configuration
+        init_timing_config();
+        timing_cfg = global_timing_config;
     endfunction
 
     virtual task run_phase(uvm_phase phase);
@@ -79,10 +86,10 @@ class int_monitor extends uvm_monitor;
         int consecutive_failures = 0;
         const int MAX_FAILURES = 10;
         int timeout_counter = 0;
-        const int MAX_TIMEOUT = 1000; // 1000ns timeout
+        int max_timeout_cycles = timing_cfg.detection_timeout_ns / timing_cfg.detection_poll_interval_ns;
 
         forever begin
-            #1ns;
+            #(timing_cfg.detection_poll_interval_ns * 1ns);
             timeout_counter++;
 
             if (uvm_hdl_read(path, current_value)) begin
@@ -99,10 +106,10 @@ class int_monitor extends uvm_monitor;
                 end
             end
 
-            // Check for timeout
-            if (timeout_counter >= MAX_TIMEOUT) begin
-                `uvm_error(get_type_name(), $sformatf("Timeout waiting for signal %s to become %0d",
-                          path, expected_value))
+            // Check for timeout using configurable timeout
+            if (timeout_counter >= max_timeout_cycles) begin
+                `uvm_error(get_type_name(), $sformatf("Timeout (%0dns) waiting for signal %s to become %0d",
+                          timing_cfg.detection_timeout_ns, path, expected_value))
                 break;
             end
         end

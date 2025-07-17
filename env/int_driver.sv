@@ -5,6 +5,7 @@ class int_driver extends uvm_driver #(int_stimulus_item);
     `uvm_component_utils(int_driver)
 
     virtual int_interface int_if;
+    timing_config timing_cfg;
 
     function new(string name = "int_driver", uvm_component parent = null);
         super.new(name, parent);
@@ -15,6 +16,10 @@ class int_driver extends uvm_driver #(int_stimulus_item);
         if(!uvm_config_db#(virtual int_interface)::get(this, "", "int_if", int_if)) begin
             `uvm_fatal(get_type_name(), "Failed to get virtual interface")
         end
+
+        // Initialize timing configuration
+        init_timing_config();
+        timing_cfg = global_timing_config;
     endfunction
 
     virtual task run_phase(uvm_phase phase);
@@ -86,9 +91,14 @@ class int_driver extends uvm_driver #(int_stimulus_item);
             end
         end
 
+        // Apply setup time
+        #(timing_cfg.level_setup_time_ns * 1ns);
+
         uvm_hdl_force(info.rtl_path_src, target_value);
         `uvm_info(get_type_name(), $sformatf("Level stimulus: %s = %b", info.name, target_value), UVM_HIGH)
-        #1ns; // Minimal propagation delay
+
+        // Apply propagation delay
+        #(timing_cfg.propagation_delay_ns * 1ns);
     endtask
 
     // Edge-triggered interrupt stimulus
@@ -98,27 +108,27 @@ class int_driver extends uvm_driver #(int_stimulus_item);
         if (info.polarity == RISING_FALLING) begin
             // Both rising and falling edges
             uvm_hdl_force(info.rtl_path_src, 0);
-            #2ns;
+            #(timing_cfg.edge_setup_time_ns * 1ns);
             uvm_hdl_force(info.rtl_path_src, 1);
-            #5ns; // Hold high for edge detection
+            #(timing_cfg.edge_pulse_width_ns * 1ns); // Hold high for edge detection
         end else if (info.polarity == ACTIVE_HIGH) begin
             // Rising edge only
             uvm_hdl_force(info.rtl_path_src, 0);
-            #2ns;
+            #(timing_cfg.edge_setup_time_ns * 1ns);
             uvm_hdl_force(info.rtl_path_src, 1);
-            #5ns;
+            #(timing_cfg.edge_hold_time_ns * 1ns);
         end else if (info.polarity == ACTIVE_LOW) begin
             // Falling edge only
             uvm_hdl_force(info.rtl_path_src, 1);
-            #2ns;
+            #(timing_cfg.edge_setup_time_ns * 1ns);
             uvm_hdl_force(info.rtl_path_src, 0);
-            #5ns;
+            #(timing_cfg.edge_hold_time_ns * 1ns);
         end else begin
             `uvm_warning(get_type_name(), $sformatf("Unknown polarity for edge interrupt '%s', using rising edge", info.name));
             uvm_hdl_force(info.rtl_path_src, 0);
-            #2ns;
+            #(timing_cfg.edge_setup_time_ns * 1ns);
             uvm_hdl_force(info.rtl_path_src, 1);
-            #5ns;
+            #(timing_cfg.edge_hold_time_ns * 1ns);
         end
     endtask
 
@@ -128,34 +138,35 @@ class int_driver extends uvm_driver #(int_stimulus_item);
 
         if (info.polarity == ACTIVE_HIGH) begin
             uvm_hdl_force(info.rtl_path_src, 0);
-            #1ns;
+            #(timing_cfg.pulse_setup_time_ns * 1ns);
             uvm_hdl_force(info.rtl_path_src, 1);
-            #1ns; // Very short pulse
+            #(timing_cfg.pulse_width_ns * 1ns); // Configurable pulse width
             uvm_hdl_force(info.rtl_path_src, 0);
-            #1ns;
+            #(timing_cfg.pulse_hold_time_ns * 1ns);
         end else if (info.polarity == ACTIVE_LOW) begin
             uvm_hdl_force(info.rtl_path_src, 1);
-            #1ns;
+            #(timing_cfg.pulse_setup_time_ns * 1ns);
             uvm_hdl_force(info.rtl_path_src, 0);
-            #1ns; // Very short pulse
+            #(timing_cfg.pulse_width_ns * 1ns); // Configurable pulse width
             uvm_hdl_force(info.rtl_path_src, 1);
-            #1ns;
+            #(timing_cfg.pulse_hold_time_ns * 1ns);
         end else begin
             `uvm_warning(get_type_name(), $sformatf("Unknown polarity for pulse interrupt '%s', using positive pulse", info.name));
             uvm_hdl_force(info.rtl_path_src, 0);
-            #1ns;
+            #(timing_cfg.pulse_setup_time_ns * 1ns);
             uvm_hdl_force(info.rtl_path_src, 1);
-            #1ns;
+            #(timing_cfg.pulse_width_ns * 1ns);
             uvm_hdl_force(info.rtl_path_src, 0);
-            #1ns;
+            #(timing_cfg.pulse_hold_time_ns * 1ns);
         end
     endtask
 
     // Clear interrupt stimulus (release HDL force)
     virtual task clear_interrupt_stimulus(interrupt_info_s info);
+        #(timing_cfg.clear_setup_time_ns * 1ns); // Setup time before clear
         uvm_hdl_release(info.rtl_path_src);
         `uvm_info(get_type_name(), $sformatf("Cleared interrupt stimulus for '%s'", info.name), UVM_HIGH)
-        #1ns; // Minimal propagation delay
+        #(timing_cfg.clear_propagation_delay_ns * 1ns); // Configurable propagation delay
     endtask
 
 endclass
