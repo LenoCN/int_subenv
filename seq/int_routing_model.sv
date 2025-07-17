@@ -20,7 +20,7 @@ class int_routing_model;
     endfunction
 
     // Function to get all source interrupts that should be merged into a specific merge interrupt
-    static function interrupt_info_s get_merge_sources(string merge_interrupt_name, ref interrupt_info_s sources[$]);
+    static function int get_merge_sources(string merge_interrupt_name, ref interrupt_info_s sources[$]);
         sources.delete();
 
         case (merge_interrupt_name)
