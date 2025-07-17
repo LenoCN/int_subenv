@@ -10,12 +10,18 @@ class tc_int_routing extends int_tc_base;
 
     virtual task main_phase(uvm_phase phase);
         int_lightweight_sequence seq;
+        int_subenv int_env;
         super.main_phase(phase);
         phase.raise_objection(this);
 
+        // Cast the base subenv to int_subenv to access m_sequencer
+        if (!$cast(int_env, env.subenv["int_subenv"])) begin
+            `uvm_fatal(get_type_name(), "Failed to cast subenv[\"int_subenv\"] to int_subenv")
+        end
+
         seq = int_lightweight_sequence::type_id::create("seq");
         // Use the new lightweight sequence with driver architecture
-        seq.start(env.m_sequencer);
+        seq.start(int_env.m_sequencer);
 
         #5us;
         phase.drop_objection(this);
