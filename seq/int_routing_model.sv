@@ -7,7 +7,7 @@
 class int_routing_model;
 
     // The main data structure holding all interrupt information.
-    static interrupt_info_s interrupt_map[];
+    static interrupt_info_s interrupt_map[$];
 
     // `build` function to populate the interrupt map.
     static function void build();
@@ -20,7 +20,7 @@ class int_routing_model;
     endfunction
 
     // Function to get all source interrupts that should be merged into a specific merge interrupt
-    static function interrupt_info_s get_merge_sources(string merge_interrupt_name, ref interrupt_info_s sources[]);
+    static function interrupt_info_s get_merge_sources(string merge_interrupt_name, ref interrupt_info_s sources[$]);
         sources.delete();
 
         case (merge_interrupt_name)
