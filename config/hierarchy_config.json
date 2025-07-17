@@ -1,0 +1,191 @@
+{
+  "version": "1.0",
+  "last_updated": "2025-07-17",
+  "description": "Hierarchy configuration for interrupt verification environment",
+  
+  "base_hierarchy": {
+    "iosub_top": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap",
+    "mcp_top": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_mcp_top",
+    "scp_top": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_scp_top_wrapper"
+  },
+  
+  "signal_mappings": {
+    "iosub_inputs": {
+      "accel_iosub_scp2imu_mhu_send_intr": "accel_iosub_scp2imu_mhu_send_intr",
+      "accel_iosub_mcp2imu_mhu_send_intr": "accel_iosub_mcp2imu_mhu_send_intr",
+      "accel_iosub_imu2scp_mhu_receive_intr": "accel_iosub_imu2scp_mhu_receive_intr",
+      "accel_iosub_imu2mcp_mhu_receive_intr": "accel_iosub_imu2mcp_mhu_receive_intr",
+      "accel_iosub_imu_ws1_intr": "accel_iosub_imu_ws1_intr",
+      "csub_iosub_pll_lock_intr": "csub_iosub_pll_lock_intr",
+      "csub_iosub_pll_unlock_intr": "csub_iosub_pll_unlock_intr",
+      "csub_iosub_pll_frechangedone_intr": "csub_iosub_pll_frechangedone_intr",
+      "csub_iosub_pll_frechange_tot_done_intr": "csub_iosub_pll_frechange_tot_done_intr",
+      "csub_iosub_pll_intdocfrac_err_intr": "csub_iosub_pll_intdocfrac_err_intr",
+      "csub_to_iosub_intr": "csub_to_iosub_intr",
+      "psub_to_iosub_intr": "psub_to_iosub_intr",
+      "pciel_to_iosub_intr": "pciel_to_iosub_intr",
+      "accel_to_iosub_intr": "accel_to_iosub_intr",
+      "d2d_to_iosub_intr": "d2d_to_iosub_intr",
+      "ddr0_to_iosub_intr": "ddr0_to_iosub_intr",
+      "ddr1_to_iosub_intr": "ddr1_to_iosub_intr",
+      "ddr2_to_iosub_intr": "ddr2_to_iosub_intr"
+    },
+    
+    "iosub_outputs": {
+      "iosub_accel_peri_intr": "iosub_accel_peri_intr"
+    },
+    
+    "mcp_signals": {
+      "iosub_to_mcp_intr": "iosub_to_mcp_intr",
+      "mcp_to_iosub_intr": "mcp_to_iosub_intr"
+    },
+    
+    "scp_signals": {
+      "iosub_to_scp_intr": "iosub_to_scp_intr",
+      "scp_to_iosub_intr": "scp_to_iosub_intr"
+    }
+  },
+  
+  "signal_widths": {
+    "iosub_to_mcp_intr": 146,
+    "mcp_to_iosub_intr": 8,
+    "iosub_to_scp_intr": 131,
+    "scp_to_iosub_intr": 53,
+    "iosub_accel_peri_intr": 32,
+    "csub_iosub_pll_lock_intr": 17,
+    "csub_iosub_pll_unlock_intr": 17,
+    "csub_iosub_pll_frechangedone_intr": 17,
+    "csub_iosub_pll_frechange_tot_done_intr": 17,
+    "csub_iosub_pll_intdocfrac_err_intr": 17,
+    "csub_to_iosub_intr": 21,
+    "psub_to_iosub_intr": 22,
+    "pciel_to_iosub_intr": 22,
+    "accel_to_iosub_intr": 15,
+    "d2d_to_iosub_intr": 18,
+    "ddr0_to_iosub_intr": 11,
+    "ddr1_to_iosub_intr": 11,
+    "ddr2_to_iosub_intr": 11
+  },
+  
+  "interrupt_groups": {
+    "CSUB": {
+      "description": "Core subsystem interrupts",
+      "base_signal": "csub_to_iosub_intr",
+      "special_signals": {
+        "pll_lock": "csub_iosub_pll_lock_intr",
+        "pll_unlock": "csub_iosub_pll_unlock_intr",
+        "pll_frechangedone": "csub_iosub_pll_frechangedone_intr",
+        "pll_frechange_tot_done": "csub_iosub_pll_frechange_tot_done_intr",
+        "pll_intdocfrac_err": "csub_iosub_pll_intdocfrac_err_intr"
+      }
+    },
+    
+    "PSUB": {
+      "description": "Power subsystem interrupts",
+      "base_signal": "psub_to_iosub_intr"
+    },
+    
+    "PCIE1": {
+      "description": "PCIe lane 1 interrupts",
+      "base_signal": "pciel_to_iosub_intr"
+    },
+    
+    "ACCEL": {
+      "description": "Accelerator interrupts",
+      "base_signal": "accel_to_iosub_intr",
+      "special_signals": {
+        "scp2imu_mhu_send": "accel_iosub_scp2imu_mhu_send_intr",
+        "mcp2imu_mhu_send": "accel_iosub_mcp2imu_mhu_send_intr",
+        "imu2scp_mhu_receive": "accel_iosub_imu2scp_mhu_receive_intr",
+        "imu2mcp_mhu_receive": "accel_iosub_imu2mcp_mhu_receive_intr",
+        "imu_ws1": "accel_iosub_imu_ws1_intr"
+      }
+    },
+    
+    "D2D": {
+      "description": "Die-to-die interrupts",
+      "base_signal": "d2d_to_iosub_intr"
+    },
+    
+    "DDR0": {
+      "description": "DDR0 controller interrupts",
+      "base_signal": "ddr0_to_iosub_intr"
+    },
+    
+    "DDR1": {
+      "description": "DDR1 controller interrupts",
+      "base_signal": "ddr1_to_iosub_intr"
+    },
+    
+    "DDR2": {
+      "description": "DDR2 controller interrupts",
+      "base_signal": "ddr2_to_iosub_intr"
+    },
+    
+    "SCP": {
+      "description": "System control processor interrupts",
+      "base_signal": "scp_to_iosub_intr"
+    },
+    
+    "MCP": {
+      "description": "Management control processor interrupts",
+      "base_signal": "mcp_to_iosub_intr"
+    },
+    
+    "IOSUB": {
+      "description": "IO subsystem internal interrupts",
+      "base_signal": "internal_interrupt_sources"
+    }
+  },
+  
+  "destination_mappings": {
+    "scp": {
+      "signal": "iosub_to_scp_intr",
+      "max_index": 130
+    },
+    "mcp": {
+      "signal": "iosub_to_mcp_intr",
+      "max_index": 145
+    },
+    "ap": {
+      "signal": "iosub_accel_peri_intr",
+      "max_index": 31
+    },
+    "imu": {
+      "signal": "iosub_to_imu_intr",
+      "max_index": -1
+    },
+    "io": {
+      "signal": "iosub_to_io_intr",
+      "max_index": -1
+    },
+    "other_die": {
+      "signal": "iosub_to_other_die_intr",
+      "max_index": -1
+    }
+  },
+  
+  "validation_rules": {
+    "required_signals": [
+      "csub_to_iosub_intr",
+      "psub_to_iosub_intr",
+      "iosub_to_scp_intr",
+      "iosub_to_mcp_intr"
+    ],
+    "index_ranges": {
+      "csub_to_iosub_intr": [0, 20],
+      "psub_to_iosub_intr": [0, 21],
+      "iosub_to_scp_intr": [0, 130],
+      "iosub_to_mcp_intr": [0, 145]
+    }
+  },
+  
+  "update_history": [
+    {
+      "date": "2025-07-17",
+      "version": "1.0",
+      "changes": "Initial hierarchy configuration based on provided signal list",
+      "author": "Augment Agent"
+    }
+  ]
+}

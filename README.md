@@ -190,6 +190,56 @@ python3 tools/verify_merge_implementation.py
 # 验证所有merge关系的正确实现
 ```
 
+## 🔄 文件更新流程
+
+### 快速更新（推荐）
+
+当Excel表格或hierarchy信号层次有更新时，使用自动化脚本：
+
+```bash
+# 从Excel文件完整更新
+./tools/update_interrupt_files.sh -e interrupt_spec.xlsx -v
+
+# 只更新hierarchy路径
+./tools/update_interrupt_files.sh -h -v
+
+# 验证当前配置
+python3 tools/validate_config.py
+```
+
+### 配置文件管理
+
+系统现在使用JSON配置文件管理hierarchy信息：
+
+- **配置文件**: `config/hierarchy_config.json`
+- **信号路径生成器**: `tools/generate_signal_paths.py`
+- **RTL路径更新工具**: `tools/update_rtl_paths.py`
+- **配置验证工具**: `tools/validate_config.py`
+
+### 更新步骤
+
+1. **更新Excel表格** → 运行 `excel_to_sv.py`
+2. **更新hierarchy配置** → 修改 `config/hierarchy_config.json`
+3. **重新生成RTL路径** → 运行 `update_rtl_paths.py`
+4. **验证结果** → 运行 `validate_config.py`
+
+详细流程请参考：`docs/interrupt_update_workflow.md`
+
+### 支持的Hierarchy路径
+
+```
+IOSUB TOP: top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap
+MCP TOP:   top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_mcp_top
+SCP TOP:   top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_scp_top_wrapper
+```
+
+### 统计信息
+
+- **总中断条目**: 421个
+- **支持的中断组**: 11个（CSUB、PSUB、DDR0/1/2、ACCEL、D2D、SCP、MCP等）
+- **目标映射**: 6种（SCP、MCP、AP、IMU、IO、Other Die）
+- **配置验证**: 完整覆盖所有信号路径
+
 ## 贡献指南
 
 1. 遵循UVM最佳实践
@@ -197,11 +247,13 @@ python3 tools/verify_merge_implementation.py
 3. 添加充分的注释和文档
 4. 运行完整的回归测试
 5. 更新相关文档
+6. **更新配置文件时，请先运行验证脚本**
+7. **提交前确保所有验证测试通过**
 
 ## 许可证
 
 本项目采用内部开发许可证，仅供项目团队使用。
 
 ---
-*最后更新: 2025-07-16*
-*版本: v2.0*
+*最后更新: 2025-07-17*
+*版本: v2.1 - 添加了配置化hierarchy管理和自动化更新流程*
