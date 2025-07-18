@@ -6,7 +6,8 @@
   "base_hierarchy": {
     "iosub_top": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap",
     "mcp_top": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_mcp_top",
-    "scp_top": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_scp_top_wrapper"
+    "scp_top": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_scp_top_wrapper",
+    "iosub_int_sub": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_int_sub"
   },
   
   "signal_mappings": {
@@ -43,6 +44,40 @@
     "scp_signals": {
       "iosub_to_scp_intr": "iosub_to_scp_intr",
       "scp_to_iosub_intr": "scp_to_iosub_intr"
+    },
+
+    "iosub_int_sub_signals": {
+      "accel_iosub_scp2imu_mhu_send_intr": "accel_iosub_scp2imu_mhu_send_intr",
+      "accel_iosub_mcp2imu_mhu_send_intr": "accel_iosub_mcp2imu_mhu_send_intr",
+      "accel_iosub_imu2scp_mhu_receive_intr": "accel_iosub_imu2scp_mhu_receive_intr",
+      "accel_iosub_imu2mcp_mhu_receive_intr": "accel_iosub_imu2mcp_mhu_receive_intr",
+      "accel_iosub_imu_wsl_intr": "accel_iosub_imu_wsl_intr",
+      "csub_iosub_pll_lock_intr": "csub_iosub_pll_lock_intr",
+      "csub_iosub_pll_unlock_intr": "csub_iosub_pll_unlock_intr",
+      "csub_iosub_pll_frechangedone_intr": "csub_iosub_pll_frechangedone_intr",
+      "csub_iosub_pll_frechange_tot_done_intr": "csub_iosub_pll_frechange_tot_done_intr",
+      "csub_iosub_pll_intdocfrac_err_intr": "csub_iosub_pll_intdocfrac_err_intr",
+      "csub_to_iosub_intr": "csub_to_iosub_intr",
+      "psub_to_iosub_intr": "psub_to_iosub_intr",
+      "pciel_to_iosub_intr": "pciel_to_iosub_intr",
+      "accel_to_iosub_intr": "accel_to_iosub_intr",
+      "d2d_to_iosub_intr": "d2d_to_iosub_intr",
+      "ddr0_to_iosub_intr": "ddr0_to_iosub_intr",
+      "ddr1_to_iosub_intr": "ddr1_to_iosub_intr",
+      "ddr2_to_iosub_intr": "ddr2_to_iosub_intr",
+      "smmu_ras_intr": "smmu_ras_intr",
+      "iosub_smmu_level_intr": "iosub_smmu_level_intr",
+      "iosub_usb_intr": "iosub_usb_intr",
+      "iosub_peri_intr": "iosub_peri_intr",
+      "iosub_dap_intr": "iosub_dap_intr",
+      "scp_to_iosub_intr": "scp_to_iosub_intr",
+      "mcp_to_iosub_intr": "mcp_to_iosub_intr",
+      "iosub_smmu_pulse_intr": "iosub_smmu_pulse_intr",
+      "d2d_s2s_intr": "d2d_s2s_intr",
+      "iosub_to_scp_intr": "iosub_to_scp_intr",
+      "iosub_to_mcp_intr": "iosub_to_mcp_intr",
+      "iosub_to_accel_intr": "iosub_to_accel_intr",
+      "pad_int_i": "pad_int_i"
     }
   },
   
@@ -64,7 +99,16 @@
     "d2d_to_iosub_intr": 18,
     "ddr0_to_iosub_intr": 11,
     "ddr1_to_iosub_intr": 11,
-    "ddr2_to_iosub_intr": 11
+    "ddr2_to_iosub_intr": 11,
+    "iosub_smmu_level_intr": 3,
+    "iosub_smmu_pulse_intr": 12,
+    "smmu_ras_intr": 3,
+    "iosub_usb_intr": 10,
+    "iosub_peri_intr": 70,
+    "iosub_dap_intr": 3,
+    "d2d_s2s_intr": 5,
+    "iosub_to_accel_intr": 32,
+    "pad_int_i": 16
   },
   
   "interrupt_groups": {
@@ -135,33 +179,105 @@
     "IOSUB": {
       "description": "IO subsystem internal interrupts",
       "base_signal": "internal_interrupt_sources"
+    },
+
+    "USB": {
+      "description": "USB controller interrupts",
+      "base_signal": "iosub_usb_intr"
+    },
+
+    "SMMU": {
+      "description": "System Memory Management Unit interrupts",
+      "base_signal": "iosub_smmu_level_intr",
+      "special_signals": {
+        "pulse": "iosub_smmu_pulse_intr",
+        "ras": "smmu_ras_intr"
+      }
+    },
+
+    "IODAP": {
+      "description": "IO Debug Access Port interrupts",
+      "base_signal": "iosub_dap_intr"
+    },
+
+    "IO_DIE": {
+      "description": "IO die interrupts",
+      "base_signal": "pad_int_i"
     }
   },
   
   "destination_mappings": {
     "scp": {
       "signal": "iosub_to_scp_intr",
-      "max_index": 130
+      "max_index": 239
     },
     "mcp": {
       "signal": "iosub_to_mcp_intr",
-      "max_index": 145
+      "max_index": 209
     },
     "ap": {
+      "signal": "iosub_to_ap_intr",
+      "max_index": 223
+    },
+    "imu": {
       "signal": "iosub_accel_peri_intr",
       "max_index": 31
     },
-    "imu": {
-      "signal": "iosub_to_imu_intr",
-      "max_index": -1
-    },
     "io": {
       "signal": "iosub_to_io_intr",
-      "max_index": -1
+      "max_index": 3
     },
     "other_die": {
       "signal": "iosub_to_other_die_intr",
-      "max_index": -1
+      "max_index": 16
+    }
+  },
+
+  "hierarchy_selection_rules": {
+    "stimulus_hierarchy": {
+      "description": "Rules for selecting hierarchy for interrupt stimulus",
+      "external_subsystems": "iosub_top",
+      "mcp_interactions": "mcp_top",
+      "scp_interactions": "scp_top",
+      "internal_boundaries": "iosub_int_sub"
+    },
+    "monitor_hierarchy": {
+      "description": "Rules for selecting hierarchy for interrupt monitoring",
+      "external_subsystems": "iosub_top",
+      "mcp_interactions": "mcp_top",
+      "scp_interactions": "scp_top",
+      "internal_boundaries": "iosub_int_sub",
+      "cross_boundary_check": "iosub_int_sub"
+    },
+    "signal_type_mapping": {
+      "external_inputs": ["PSUB", "DDR0", "DDR1", "DDR2", "ACCEL", "CSUB", "PCIEL", "D2D"],
+      "mcp_signals": ["MCP"],
+      "scp_signals": ["SCP"],
+      "internal_signals": ["IOSUB", "USB", "SMMU", "IODAP", "IO_DIE"],
+      "boundary_signals": [
+        "accel_iosub_scp2imu_mhu_send_intr",
+        "accel_iosub_mcp2imu_mhu_send_intr",
+        "accel_iosub_imu2scp_mhu_receive_intr",
+        "accel_iosub_imu2mcp_mhu_receive_intr",
+        "accel_iosub_imu_wsl_intr"
+      ]
+    },
+    "group_to_iosub_signal_mapping": {
+      "description": "Mapping from interrupt groups to iosub_int_sub boundary signals",
+      "USB": "iosub_usb_intr",
+      "SMMU": "iosub_smmu_level_intr",
+      "IODAP": "iosub_dap_intr",
+      "IO_DIE": "pad_int_i",
+      "CSUB": "csub_to_iosub_intr",
+      "PSUB": "psub_to_iosub_intr",
+      "PCIE1": "pciel_to_iosub_intr",
+      "ACCEL": "accel_to_iosub_intr",
+      "D2D": "d2d_to_iosub_intr",
+      "DDR0": "ddr0_to_iosub_intr",
+      "DDR1": "ddr1_to_iosub_intr",
+      "DDR2": "ddr2_to_iosub_intr",
+      "SCP": "scp_to_iosub_intr",
+      "MCP": "mcp_to_iosub_intr"
     }
   },
   

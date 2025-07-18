@@ -184,6 +184,91 @@ def parse_destination_sheet(df: pd.DataFrame, sheet_name: str) -> Dict[str, int]
                 except (ValueError, TypeError):
                     continue
 
+    elif 'iosub-to-IMU' in sheet_name:
+        # For IMU sheet: index in column 1, name in column 2
+        index_col = df.columns[1]  # 'IOSUB TO IMU中断列表'
+        name_col = df.columns[2]   # 'Unnamed: 2'
+
+        for idx, row in df.iterrows():
+            if pd.notna(row[name_col]) and pd.notna(row[index_col]):
+                interrupt_name = str(row[name_col]).strip()
+                try:
+                    # Skip header rows
+                    if interrupt_name.lower() in ['interrupt name', 'interrupt']:
+                        continue
+                    interrupt_index = int(float(row[index_col]))
+                    interrupt_indices[interrupt_name] = interrupt_index
+                except (ValueError, TypeError):
+                    continue
+
+    elif 'SCP M7' in sheet_name:
+        # For SCP sheet: index in column 1, name in column 2
+        index_col = df.columns[1]  # 'SCP M7中断列表'
+        name_col = df.columns[2]   # 'Unnamed: 2'
+
+        for idx, row in df.iterrows():
+            if pd.notna(row[name_col]) and pd.notna(row[index_col]):
+                interrupt_name = str(row[name_col]).strip()
+                try:
+                    # Skip header rows and NMI entries
+                    if interrupt_name.lower() in ['interrupt name', 'interrupt'] or str(row[index_col]).upper() == 'NMI':
+                        continue
+                    interrupt_index = int(float(row[index_col]))
+                    interrupt_indices[interrupt_name] = interrupt_index
+                except (ValueError, TypeError):
+                    continue
+
+    elif 'MCP M7' in sheet_name:
+        # For MCP sheet: index in column 1, name in column 2
+        index_col = df.columns[1]  # 'MCP M7中断列表'
+        name_col = df.columns[2]   # 'Unnamed: 2'
+
+        for idx, row in df.iterrows():
+            if pd.notna(row[name_col]) and pd.notna(row[index_col]):
+                interrupt_name = str(row[name_col]).strip()
+                try:
+                    # Skip header rows and NMI entries
+                    if interrupt_name.lower() in ['interrupt name', 'interrupt'] or str(row[index_col]).upper() == 'NMI':
+                        continue
+                    interrupt_index = int(float(row[index_col]))
+                    interrupt_indices[interrupt_name] = interrupt_index
+                except (ValueError, TypeError):
+                    continue
+
+    elif 'iosub-to-IO' in sheet_name:
+        # For IO sheet: index in column 1, name in column 2
+        index_col = df.columns[1]  # 'IOSUB TO IO中断列表'
+        name_col = df.columns[2]   # 'Unnamed: 2'
+
+        for idx, row in df.iterrows():
+            if pd.notna(row[name_col]) and pd.notna(row[index_col]):
+                interrupt_name = str(row[name_col]).strip()
+                try:
+                    # Skip header rows
+                    if interrupt_name.lower() in ['interrupt name', 'interrupt']:
+                        continue
+                    interrupt_index = int(float(row[index_col]))
+                    interrupt_indices[interrupt_name] = interrupt_index
+                except (ValueError, TypeError):
+                    continue
+
+    elif '跨die' in sheet_name:
+        # For cross-die sheet: index in column 1, name in column 2
+        index_col = df.columns[1]  # '跨die中断列表'
+        name_col = df.columns[2]   # 'Unnamed: 2'
+
+        for idx, row in df.iterrows():
+            if pd.notna(row[name_col]) and pd.notna(row[index_col]):
+                interrupt_name = str(row[name_col]).strip()
+                try:
+                    # Skip header rows
+                    if interrupt_name.lower() in ['interrupt name', 'interrupt']:
+                        continue
+                    interrupt_index = int(float(row[index_col]))
+                    interrupt_indices[interrupt_name] = interrupt_index
+                except (ValueError, TypeError):
+                    continue
+
     else:
         # Generic parsing for other sheets
         # Try to find columns with interrupt names and indices
