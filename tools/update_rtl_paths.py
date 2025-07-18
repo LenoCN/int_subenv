@@ -86,7 +86,8 @@ class RTLPathUpdater:
         dest_paths = {}
         for dest in ['ap', 'scp', 'mcp', 'imu', 'io', 'other_die']:
             if to_flags.get(dest, 0) == 1 and dest_indices.get(dest, -1) >= 0:
-                dest_paths[dest] = self.generator.generate_destination_path(dest, dest_indices[dest])
+                # Pass interrupt name to support hierarchy selection for monitoring
+                dest_paths[dest] = self.generator.generate_destination_path(dest, dest_indices[dest], name)
             else:
                 dest_paths[dest] = ""
         
