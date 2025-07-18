@@ -1,6 +1,9 @@
 `ifndef INT_SCOREBOARD_SV
 `define INT_SCOREBOARD_SV
 
+// Declare custom analysis imp for expected transactions
+`uvm_analysis_imp_decl(_exp)
+
 // Transaction class for expected interrupt notifications
 class int_exp_transaction extends uvm_sequence_item;
     interrupt_info_s interrupt_info;
@@ -18,7 +21,7 @@ class int_scoreboard extends uvm_scoreboard;
     `uvm_component_utils(int_scoreboard)
 
     uvm_analysis_imp #(int_transaction, int_scoreboard) item_collected_export;
-    uvm_analysis_imp #(int_exp_transaction, int_scoreboard) expected_export;
+    uvm_analysis_imp_exp #(int_exp_transaction, int_scoreboard) expected_export;
 
     // This queue stores the names of the interrupts we expect to see.
     // The sequence will send expected interrupts through TLM interface.
