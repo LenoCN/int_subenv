@@ -10,6 +10,28 @@ class int_lightweight_sequence extends int_base_sequence;
         super.new(name);
     endfunction
 
+    // Helper function to check if interrupt routing should be skipped
+    // Skip interrupts that only route to other_die or io destinations
+    // NOTE: Do NOT skip interrupts with no destinations as they are merge sources
+    virtual function bit should_skip_interrupt_check(interrupt_info_s info);
+        bit has_other_destinations = 0;
+
+        // Check if interrupt has destinations other than to_other_die and to_io
+        if (info.to_ap || info.to_scp || info.to_mcp || info.to_imu) begin
+            has_other_destinations = 1;
+        end
+
+        // Skip ONLY if interrupt routes to other_die or io AND has no other destinations
+        // Do NOT skip interrupts with no destinations at all (they are merge sources)
+        if (!has_other_destinations && (info.to_other_die || info.to_io)) begin
+            `uvm_info(get_type_name(), $sformatf("Skipping interrupt '%s' - only routes to other_die(%0d) or io(%0d)",
+                     info.name, info.to_other_die, info.to_io), UVM_MEDIUM)
+            return 1;
+        end
+
+        return 0;
+    endfunction
+
     virtual task body();
         `uvm_info(get_type_name(), "Starting lightweight interrupt sequence execution", UVM_LOW)
         
@@ -63,6 +85,11 @@ class int_lightweight_sequence extends int_base_sequence;
 
         if (info.rtl_path_src == "") begin
             `uvm_warning(get_type_name(), $sformatf("Source path for interrupt '%s' is empty. Skipping.", info.name));
+            return;
+        end
+
+        // Skip interrupts that only route to other_die or io destinations
+        if (should_skip_interrupt_check(info)) begin
             return;
         end
 
@@ -150,6 +177,11 @@ class int_lightweight_sequence extends int_base_sequence;
             return;
         end
 
+        // Skip merge interrupts that only route to other_die or io destinations
+        if (should_skip_interrupt_check(merge_info)) begin
+            return;
+        end
+
         `uvm_info(get_type_name(), $sformatf("RTL source path for merge source %s: %s",
                  source_info.name, source_info.rtl_path_src), UVM_HIGH)
 
@@ -212,6 +244,11 @@ class int_lightweight_sequence extends int_base_sequence;
 
         `uvm_info(get_type_name(), $sformatf("Found %0d valid sources for multi-source test of merge interrupt: %s",
                  valid_sources, merge_info.name), UVM_MEDIUM)
+
+        // Skip merge interrupts that only route to other_die or io destinations
+        if (should_skip_interrupt_check(merge_info)) begin
+            return;
+        end
 
         // Register expectation for the merge interrupt
         `uvm_info(get_type_name(), $sformatf("Registering expected merge interrupt: %s for multi-source test",
