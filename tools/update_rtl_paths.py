@@ -79,8 +79,16 @@ class RTLPathUpdater:
         dest_indices = entry_info['dest_indices']
         to_flags = entry_info['to_flags']
         
-        # Generate source path for stimulus
-        src_path = self.generator.generate_source_path(name, group, index)
+        # Generate source path for stimulus - handle special cases for SCP and MCP signals
+        if group == "SCP" and "scp_to_iosub" in name:
+            # Use the new generate_source_signal_path method for scp_to_iosub signals
+            src_path = self.generator.generate_source_signal_path("scp_to_iosub_intr", group, index)
+        elif group == "MCP" and "mcp_to_iosub" in name:
+            # Use the new generate_source_signal_path method for mcp_to_iosub signals
+            src_path = self.generator.generate_source_signal_path("mcp_to_iosub_intr", group, index)
+        else:
+            # Standard source path generation
+            src_path = self.generator.generate_source_path(name, group, index)
         
         # Generate destination paths for monitoring
         dest_paths = {}
