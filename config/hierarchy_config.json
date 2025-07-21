@@ -1,6 +1,6 @@
 {
-  "version": "1.0",
-  "last_updated": "2025-07-17",
+  "version": "1.1",
+  "last_updated": "2025-07-21",
   "description": "Hierarchy configuration for interrupt verification environment",
   
   "base_hierarchy": {
@@ -37,13 +37,15 @@
     },
     
     "mcp_signals": {
-      "iosub_to_mcp_intr": "iosub_to_mcp_intr",
-      "mcp_to_iosub_intr": "mcp_to_iosub_intr"
+      "iosub_to_mcp_intr": "cpu_irq",
+      "mcp_to_iosub_intr": "mcp_to_iosub_intr",
+      "mcp_to_iosub_hierarchy": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_mcp_top"
     },
-    
+
     "scp_signals": {
-      "iosub_to_scp_intr": "iosub_to_scp_intr",
-      "scp_to_iosub_intr": "scp_to_iosub_intr"
+      "iosub_to_scp_intr": "cpu_irq",
+      "scp_to_iosub_intr": "scp_to_iosub_intr",
+      "scp_to_iosub_hierarchy": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_scp_top_wrapper"
     },
 
     "iosub_int_sub_signals": {
@@ -82,10 +84,11 @@
   },
   
   "signal_widths": {
-    "iosub_to_mcp_intr": 146,
+    "iosub_to_mcp_intr": 240,
     "mcp_to_iosub_intr": 8,
-    "iosub_to_scp_intr": 131,
+    "iosub_to_scp_intr": 240,
     "scp_to_iosub_intr": 53,
+    "iosub_to_ap_intr": 224,
     "iosub_accel_peri_intr": 32,
     "csub_iosub_pll_lock_intr": 17,
     "csub_iosub_pll_unlock_intr": 17,
@@ -208,15 +211,18 @@
   
   "destination_mappings": {
     "scp": {
-      "signal": "iosub_to_scp_intr",
+      "signal": "cpu_irq",
+      "hierarchy_path": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_scp_top_wrapper.u_scp_top.u_m7_wrapper",
       "max_index": 239
     },
     "mcp": {
-      "signal": "iosub_to_mcp_intr",
-      "max_index": 209
+      "signal": "cpu_irq",
+      "hierarchy_path": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_mcp_top.u_cortexm7_wrapper",
+      "max_index": 239
     },
     "ap": {
       "signal": "iosub_to_ap_intr",
+      "hierarchy_path": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_int_sub",
       "max_index": 223
     },
     "imu": {
@@ -301,6 +307,12 @@
       "date": "2025-07-17",
       "version": "1.0",
       "changes": "Initial hierarchy configuration based on provided signal list",
+      "author": "Augment Agent"
+    },
+    {
+      "date": "2025-07-21",
+      "version": "1.1",
+      "changes": "Updated hierarchy paths based on actual DUT structure: AP, SCP, MCP signal paths corrected with proper hierarchy and bit widths",
       "author": "Augment Agent"
     }
   ]

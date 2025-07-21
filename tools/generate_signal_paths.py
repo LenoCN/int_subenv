@@ -221,6 +221,41 @@ class SignalPathGenerator:
 
         return group_signal_map.get(group, "")  # Return empty string if not found
 
+    def generate_source_signal_path(self, signal_name: str, group: str, index: int) -> str:
+        """
+        Generate the RTL source path for specific signals like scp_to_iosub_intr and mcp_to_iosub_intr.
+
+        Args:
+            signal_name: Name of the signal (e.g., "scp_to_iosub_intr", "mcp_to_iosub_intr")
+            group: Interrupt group (SCP, MCP, etc.)
+            index: Index within the signal
+
+        Returns:
+            Full RTL path for the source signal
+        """
+        if signal_name == "scp_to_iosub_intr" and group == "SCP":
+            # Use the correct hierarchy for scp_to_iosub signal
+            scp_hierarchy = self.signal_mappings.get('scp_signals', {}).get('scp_to_iosub_hierarchy', '')
+            if scp_hierarchy:
+                return f"{scp_hierarchy}.scp_to_iosub_intr[{index}]"
+            else:
+                # Fallback to base hierarchy
+                scp_base = self.base_hierarchy.get('scp_top', '')
+                return f"{scp_base}.scp_to_iosub_intr[{index}]"
+
+        elif signal_name == "mcp_to_iosub_intr" and group == "MCP":
+            # Use the correct hierarchy for mcp_to_iosub signal
+            mcp_hierarchy = self.signal_mappings.get('mcp_signals', {}).get('mcp_to_iosub_hierarchy', '')
+            if mcp_hierarchy:
+                return f"{mcp_hierarchy}.mcp_to_iosub_intr[{index}]"
+            else:
+                # Fallback to base hierarchy
+                mcp_base = self.base_hierarchy.get('mcp_top', '')
+                return f"{mcp_base}.mcp_to_iosub_intr[{index}]"
+        else:
+            # For other signals, use the standard source path generation
+            return self.generate_source_path(signal_name, group, index)
+
     def generate_source_path(self, interrupt_name: str, group: str, index: int) -> str:
         """
         Generate the RTL source path for stimulus based on interrupt name and group.
@@ -296,41 +331,46 @@ class SignalPathGenerator:
         if destination in self.destination_mappings:
             dest_config = self.destination_mappings[destination]
             signal_name = dest_config.get('signal', f"iosub_to_{destination}_intr")
+            hierarchy_path = dest_config.get('hierarchy_path', '')
             max_index = dest_config.get('max_index', -1)
 
             # Validate index range if specified
             if max_index >= 0 and index > max_index:
                 print(f"Warning: Index {index} exceeds max index {max_index} for destination {destination}")
 
-            # Generate path based on destination type and monitoring requirements
-            if destination == 'scp':
-                # Check if we should monitor at iosub_int_sub for cross-boundary checking
-                if interrupt_name and self.hierarchy_rules.get("monitor_hierarchy", {}).get("cross_boundary_check") == "iosub_int_sub":
-                    int_sub_base = self.base_hierarchy.get('iosub_int_sub', '')
-                    return f"{int_sub_base}.{signal_name}[{index}]"
+            # Use the specific hierarchy path if provided, otherwise use base hierarchy
+            if hierarchy_path:
+                return f"{hierarchy_path}.{signal_name}[{index}]"
+            else:
+                # Generate path based on destination type and monitoring requirements
+                if destination == 'scp':
+                    # Check if we should monitor at iosub_int_sub for cross-boundary checking
+                    if interrupt_name and self.hierarchy_rules.get("monitor_hierarchy", {}).get("cross_boundary_check") == "iosub_int_sub":
+                        int_sub_base = self.base_hierarchy.get('iosub_int_sub', '')
+                        return f"{int_sub_base}.{signal_name}[{index}]"
+                    else:
+                        scp_base = self.base_hierarchy.get('scp_top', '')
+                        return f"{scp_base}.{signal_name}[{index}]"
+                elif destination == 'mcp':
+                    # Check if we should monitor at iosub_int_sub for cross-boundary checking
+                    if interrupt_name and self.hierarchy_rules.get("monitor_hierarchy", {}).get("cross_boundary_check") == "iosub_int_sub":
+                        int_sub_base = self.base_hierarchy.get('iosub_int_sub', '')
+                        return f"{int_sub_base}.{signal_name}[{index}]"
+                    else:
+                        mcp_base = self.base_hierarchy.get('mcp_top', '')
+                        return f"{mcp_base}.{signal_name}[{index}]"
+                elif destination == 'imu':
+                    # IMU signals can be monitored at iosub_int_sub for internal boundary checking
+                    if interrupt_name and any(pattern in interrupt_name for pattern in ["accel", "imu"]):
+                        int_sub_base = self.base_hierarchy.get('iosub_int_sub', '')
+                        return f"{int_sub_base}.{signal_name}[{index}]"
+                    else:
+                        iosub_base = self.base_hierarchy.get('iosub_top', '')
+                        return f"{iosub_base}.{signal_name}[{index}]"
                 else:
-                    scp_base = self.base_hierarchy.get('scp_top', '')
-                    return f"{scp_base}.{signal_name}[{index}]"
-            elif destination == 'mcp':
-                # Check if we should monitor at iosub_int_sub for cross-boundary checking
-                if interrupt_name and self.hierarchy_rules.get("monitor_hierarchy", {}).get("cross_boundary_check") == "iosub_int_sub":
-                    int_sub_base = self.base_hierarchy.get('iosub_int_sub', '')
-                    return f"{int_sub_base}.{signal_name}[{index}]"
-                else:
-                    mcp_base = self.base_hierarchy.get('mcp_top', '')
-                    return f"{mcp_base}.{signal_name}[{index}]"
-            elif destination == 'imu':
-                # IMU signals can be monitored at iosub_int_sub for internal boundary checking
-                if interrupt_name and any(pattern in interrupt_name for pattern in ["accel", "imu"]):
-                    int_sub_base = self.base_hierarchy.get('iosub_int_sub', '')
-                    return f"{int_sub_base}.{signal_name}[{index}]"
-                else:
+                    # For ap, io, other_die - these go through iosub_top
                     iosub_base = self.base_hierarchy.get('iosub_top', '')
                     return f"{iosub_base}.{signal_name}[{index}]"
-            else:
-                # For ap, io, other_die - these go through iosub_top
-                iosub_base = self.base_hierarchy.get('iosub_top', '')
-                return f"{iosub_base}.{signal_name}[{index}]"
 
         # Fallback for unknown destinations
         else:
