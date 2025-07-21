@@ -234,7 +234,8 @@
       "max_index": 3
     },
     "other_die": {
-      "signal": "iosub_to_other_die_intr",
+      "signal": "int_bus",
+      "hierarchy_path": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_scp_top_wrapper.u_scp_top.u_int_to_axi",
       "max_index": 16
     }
   },
