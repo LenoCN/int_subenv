@@ -79,7 +79,7 @@ class SignalPathGenerator:
                 'csub_iosub_pll_intdocfrac_err_intr': 'csub_iosub_pll_intdocfrac_err_intr',
                 'csub_to_iosub_intr': 'csub_to_iosub_intr',
                 'psub_to_iosub_intr': 'psub_to_iosub_intr',
-                'pciel_to_iosub_intr': 'pciel_to_iosub_intr',
+                'pcie1_to_iosub_intr': 'pcie1_to_iosub_intr',
                 'accel_to_iosub_intr': 'accel_to_iosub_intr',
                 'd2d_to_iosub_intr': 'd2d_to_iosub_intr',
                 'ddr0_to_iosub_intr': 'ddr0_to_iosub_intr',
@@ -123,7 +123,7 @@ class SignalPathGenerator:
             'csub_iosub_pll_intdocfrac_err_intr': 17,
             'csub_to_iosub_intr': 21,  # [20:0]
             'psub_to_iosub_intr': 22,  # [21:0]
-            'pciel_to_iosub_intr': 22, # [21:0]
+            'pcie1_to_iosub_intr': 22, # [21:0]
             'accel_to_iosub_intr': 15, # [14:0]
             'd2d_to_iosub_intr': 18,   # [17:0]
             'ddr0_to_iosub_intr': 11,  # [10:0]
@@ -209,7 +209,7 @@ class SignalPathGenerator:
             "IO_DIE": "pad_int_i",
             "CSUB": "csub_to_iosub_intr",
             "PSUB": "psub_to_iosub_intr",
-            "PCIE1": "pciel_to_iosub_intr",
+            "PCIE1": "pcie1_to_iosub_intr",
             "ACCEL": "accel_to_iosub_intr",
             "D2D": "d2d_to_iosub_intr",
             "DDR0": "ddr0_to_iosub_intr",
@@ -276,14 +276,22 @@ class SignalPathGenerator:
             if group_hierarchy and group_hierarchy in self.base_hierarchy:
                 base_path = self.base_hierarchy[group_hierarchy]
 
-            # Check if this group uses interrupt name as signal name directly
-            if group_config.get('use_interrupt_name_as_signal', False):
-                return f"{base_path}.{interrupt_name}"
-
-            # Check for special signals first
+            # Check for special signals first (higher priority than use_interrupt_name_as_signal)
             if 'special_signals' in group_config:
+                # For exact match (like IODAP), check if interrupt name is a key
+                if interrupt_name in group_config['special_signals']:
+                    signal_name = group_config['special_signals'][interrupt_name]
+                    # Check if this signal has a special hierarchy
+                    if 'special_hierarchy' in group_config and interrupt_name in group_config['special_hierarchy']:
+                        special_hierarchy_key = group_config['special_hierarchy'][interrupt_name]
+                        special_base_path = self.base_hierarchy.get(special_hierarchy_key, base_path)
+                        return f"{special_base_path}.{signal_name}"
+                    else:
+                        return f"{base_path}.{signal_name}"
+
+                # For partial match (like USB), check if special key is contained in interrupt name
                 for special_key, signal_name in group_config['special_signals'].items():
-                    if special_key in interrupt_name:
+                    if special_key != interrupt_name and special_key in interrupt_name:
                         # Check if this signal has a special hierarchy
                         if 'special_hierarchy' in group_config and special_key in group_config['special_hierarchy']:
                             special_hierarchy_key = group_config['special_hierarchy'][special_key]
@@ -301,6 +309,10 @@ class SignalPathGenerator:
                             else:
                                 # Multi-bit signal
                                 return f"{base_path}.{signal_name}[{index}]"
+
+            # Check if this group uses interrupt name as signal name directly (after special signals check)
+            if group_config.get('use_interrupt_name_as_signal', False):
+                return f"{base_path}.{interrupt_name}"
 
             # Use base signal for the group
             base_signal = group_config.get('base_signal', f"{group.lower()}_to_iosub_intr")
