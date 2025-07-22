@@ -59,7 +59,8 @@ class int_monitor extends uvm_monitor;
             if (info.rtl_path_scp != "") monitor_single_path(info, "SCP", info.rtl_path_scp);
             if (info.rtl_path_mcp != "") monitor_single_path(info, "MCP", info.rtl_path_mcp);
             if (info.rtl_path_imu != "") monitor_single_path(info, "IMU", info.rtl_path_imu);
-            if (info.rtl_path_io != "") monitor_single_path(info, "IO", info.rtl_path_io);
+            // IO monitoring disabled - iosub_to_io monitoring mechanism turned off
+            // if (info.rtl_path_io != "") monitor_single_path(info, "IO", info.rtl_path_io);
             if (info.rtl_path_other_die != "") monitor_single_path(info, "OTHER_DIE", info.rtl_path_other_die);
         join_none
     endtask
