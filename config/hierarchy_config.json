@@ -141,15 +141,22 @@
     },
     
     "ACCEL": {
-      "description": "Accelerator interrupts",
+      "description": "Accelerator interrupts - 20 total interrupts (sub_index 0-19)",
       "base_signal": "accel_to_iosub_intr",
       "special_signals": {
-        "scp2imu_mhu_send": "accel_iosub_scp2imu_mhu_send_intr",
-        "mcp2imu_mhu_send": "accel_iosub_mcp2imu_mhu_send_intr",
-        "imu2scp_mhu_receive": "accel_iosub_imu2scp_mhu_receive_intr",
-        "imu2mcp_mhu_receive": "accel_iosub_imu2mcp_mhu_receive_intr",
-        "imu_ws1": "accel_iosub_imu_ws1_intr"
-      }
+        "accel_iosub_scp2imu_mhu_send_intr": "accel_iosub_scp2imu_mhu_send_intr",
+        "accel_iosub_imu2scp_mhu_receive_intr": "accel_iosub_imu2scp_mhu_receive_intr",
+        "accel_iosub_imu_ws1_intr": "accel_iosub_imu_ws1_intr",
+        "accel_iosub_mcp2imu_mhu_send_intr": "accel_iosub_mcp2imu_mhu_send_intr",
+        "accel_iosub_imu2mcp_mhu_receive_intr": "accel_iosub_imu2mcp_mhu_receive_intr"
+      },
+      "special_hierarchy": {
+        "accel_iosub_scp2imu_mhu_send_intr": "iosub_int_sub",
+        "accel_iosub_imu2scp_mhu_receive_intr": "iosub_int_sub",
+        "accel_iosub_mcp2imu_mhu_send_intr": "iosub_int_sub",
+        "accel_iosub_imu2mcp_mhu_receive_intr": "iosub_int_sub"
+      },
+      "comment": "MHU interrupts (sub_index 0,1,3,4) at iosub_int_sub, imu_ws1 (sub_index 2) at top level, others (sub_index 5-19) use accel_to_iosub_intr[sub_index-5]"
     },
     
     "D2D": {
