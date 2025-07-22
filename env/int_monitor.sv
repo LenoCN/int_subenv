@@ -39,7 +39,10 @@ class int_monitor extends uvm_monitor;
 
     virtual task run_phase(uvm_phase phase);
         int_routing_model::build();
-        
+
+        // Debug: Show interrupt configuration summary
+        debug_interrupt_configuration();
+
         // Create a fork for each interrupt to be monitored in parallel.
         // This provides better isolation and scalability than monitoring entire buses.
         fork
@@ -67,15 +70,32 @@ class int_monitor extends uvm_monitor;
     // Monitors a specific RTL signal path for an interrupt
     virtual task monitor_single_path(interrupt_info_s info, string dest, string path);
         logic value;
+        logic prev_value = 0;
+        int detection_count = 0;
+
+        `uvm_info(get_type_name(), $sformatf("Starting monitor for interrupt '%s' -> '%s' at path: %s",
+                  info.name, dest, path), UVM_MEDIUM)
+
         forever begin
             // Wait for the interrupt signal to go high
+            `uvm_info(get_type_name(), $sformatf("Waiting for signal HIGH on path: %s (interrupt: %s -> %s)",
+                      path, info.name, dest), UVM_HIGH)
             wait_for_signal_edge(path, 1);
-            
+
+            detection_count++;
+            `uvm_info(get_type_name(), $sformatf("INTERRUPT DETECTED [%0d]: '%s' -> '%s' signal went HIGH at path: %s",
+                      detection_count, info.name, dest, path), UVM_LOW)
+
             // Send the transaction when the interrupt is detected
             send_transaction(info, dest);
 
             // Wait for the interrupt signal to go low to prevent re-triggering
+            `uvm_info(get_type_name(), $sformatf("Waiting for signal LOW on path: %s (interrupt: %s -> %s)",
+                      path, info.name, dest), UVM_HIGH)
             wait_for_signal_edge(path, 0);
+
+            `uvm_info(get_type_name(), $sformatf("INTERRUPT CLEARED [%0d]: '%s' -> '%s' signal went LOW at path: %s",
+                      detection_count, info.name, dest, path), UVM_HIGH)
         end
     endtask
 
@@ -83,10 +103,15 @@ class int_monitor extends uvm_monitor;
     // In a real scenario, this would be replaced with @(posedge/negedge virtual_interface.signal)
     virtual task wait_for_signal_edge(string path, logic expected_value);
         logic current_value;
+        logic prev_value;
         int consecutive_failures = 0;
         const int MAX_FAILURES = 10;
         int timeout_counter = 0;
         int max_timeout_cycles = timing_cfg.detection_timeout_ns / timing_cfg.detection_poll_interval_ns;
+        bit first_read = 1;
+
+        `uvm_info(get_type_name(), $sformatf("Starting signal polling: path=%s, expected_value=%0d, timeout=%0dns",
+                  path, expected_value, timing_cfg.detection_timeout_ns), UVM_DEBUG)
 
         forever begin
             #(timing_cfg.detection_poll_interval_ns * 1ns);
@@ -94,9 +119,21 @@ class int_monitor extends uvm_monitor;
 
             if (uvm_hdl_read(path, current_value)) begin
                 consecutive_failures = 0; // Reset failure counter on successful read
+
+                // Log signal transitions for debugging
+                if (!first_read && (current_value != prev_value)) begin
+                    `uvm_info(get_type_name(), $sformatf("Signal transition detected: %s changed from %0d to %0d",
+                              path, prev_value, current_value), UVM_HIGH)
+                end
+
                 if (current_value == expected_value) begin
+                    `uvm_info(get_type_name(), $sformatf("Signal reached expected value: %s = %0d",
+                              path, expected_value), UVM_DEBUG)
                     break;
                 end
+
+                prev_value = current_value;
+                first_read = 0;
             end else begin
                 consecutive_failures++;
                 if (consecutive_failures >= MAX_FAILURES) begin
@@ -104,12 +141,14 @@ class int_monitor extends uvm_monitor;
                               path, consecutive_failures))
                     break;
                 end
+                `uvm_warning(get_type_name(), $sformatf("HDL read failure [%0d/%0d] for path: %s",
+                            consecutive_failures, MAX_FAILURES, path))
             end
 
             // Check for timeout using configurable timeout
             if (timeout_counter >= max_timeout_cycles) begin
-                `uvm_error(get_type_name(), $sformatf("Timeout (%0dns) waiting for signal %s to become %0d",
-                          timing_cfg.detection_timeout_ns, path, expected_value))
+                `uvm_error(get_type_name(), $sformatf("Timeout (%0dns) waiting for signal %s to become %0d (current: %0d, cycles: %0d)",
+                          timing_cfg.detection_timeout_ns, path, expected_value, current_value, timeout_counter))
                 break;
             end
         end
@@ -119,10 +158,38 @@ class int_monitor extends uvm_monitor;
         int_transaction trans = int_transaction::type_id::create("trans");
         string event_key;
         uvm_event int_event;
+        string rtl_path;
+
+        `uvm_info(get_type_name(), "=== INTERRUPT TRANSACTION CREATION ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("Creating transaction for interrupt: %s", info.name), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Group: %s", info.group.name()), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Index: %0d", info.index), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Trigger: %s", info.trigger.name()), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Polarity: %s", info.polarity.name()), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Destination: %s", dest), UVM_MEDIUM)
+
+        // Get the RTL path for this destination
+        case (dest)
+            "AP": rtl_path = info.rtl_path_ap;
+            "SCP": rtl_path = info.rtl_path_scp;
+            "MCP": rtl_path = info.rtl_path_mcp;
+            "IMU": rtl_path = info.rtl_path_imu;
+            "IO": rtl_path = info.rtl_path_io;
+            "OTHER_DIE": rtl_path = info.rtl_path_other_die;
+            default: rtl_path = "UNKNOWN_DEST";
+        endcase
+
+        `uvm_info(get_type_name(), $sformatf("  - RTL Path: %s", rtl_path), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Source Path: %s", info.rtl_path_src), UVM_MEDIUM)
 
         // Create transaction
         trans.interrupt_info = info;
         trans.destination_name = dest;
+
+        `uvm_info(get_type_name(), $sformatf("Sending transaction to scoreboard: %s@%s", info.name, dest), UVM_MEDIUM)
+
+        // Validate routing configuration (only at HIGH verbosity to avoid spam)
+        debug_interrupt_routing(info, dest);
 
         // Send to scoreboard
         item_collected_port.write(trans);
@@ -132,11 +199,104 @@ class int_monitor extends uvm_monitor;
         int_event = interrupt_detected_events.get(event_key);
         int_event.trigger();
 
-        `uvm_info(get_type_name(), $sformatf("Detected interrupt '%s' at '%s' and triggered event",
-                  info.name, dest), UVM_HIGH)
+        `uvm_info(get_type_name(), $sformatf("✅ INTERRUPT DETECTED: '%s' -> '%s' (event: %s)",
+                  info.name, dest, event_key), UVM_LOW)
+        `uvm_info(get_type_name(), "=== END INTERRUPT TRANSACTION ===", UVM_MEDIUM)
     endtask
 
+    // Generic debugging function for interrupt routing validation
+    function void debug_interrupt_routing(interrupt_info_s info, string dest);
+        logic current_src_value, current_dest_value;
+        bit routing_valid = 0;
 
+        `uvm_info(get_type_name(), $sformatf("🔍 === INTERRUPT ROUTING DEBUG: %s ===", info.name), UVM_HIGH)
+        `uvm_info(get_type_name(), $sformatf("Interrupt: %s detected at destination: %s", info.name, dest), UVM_HIGH)
+
+        // Read current signal values for debugging
+        if (uvm_hdl_read(info.rtl_path_src, current_src_value)) begin
+            `uvm_info(get_type_name(), $sformatf("Source signal value: %s = %0d", info.rtl_path_src, current_src_value), UVM_HIGH)
+        end else begin
+            `uvm_warning(get_type_name(), $sformatf("Failed to read source signal: %s", info.rtl_path_src));
+        end
+
+        // Validate routing configuration and read destination signal
+        case (dest)
+            "AP": begin
+                routing_valid = info.to_ap;
+                if (info.rtl_path_ap != "" && uvm_hdl_read(info.rtl_path_ap, current_dest_value)) begin
+                    `uvm_info(get_type_name(), $sformatf("AP destination signal: %s = %0d", info.rtl_path_ap, current_dest_value), UVM_HIGH)
+                end
+            end
+            "SCP": begin
+                routing_valid = info.to_scp;
+                if (info.rtl_path_scp != "" && uvm_hdl_read(info.rtl_path_scp, current_dest_value)) begin
+                    `uvm_info(get_type_name(), $sformatf("SCP destination signal: %s = %0d", info.rtl_path_scp, current_dest_value), UVM_HIGH)
+                end
+            end
+            "MCP": begin
+                routing_valid = info.to_mcp;
+                if (info.rtl_path_mcp != "" && uvm_hdl_read(info.rtl_path_mcp, current_dest_value)) begin
+                    `uvm_info(get_type_name(), $sformatf("MCP destination signal: %s = %0d", info.rtl_path_mcp, current_dest_value), UVM_HIGH)
+                end
+            end
+            "IMU": begin
+                routing_valid = info.to_imu;
+                if (info.rtl_path_imu != "" && uvm_hdl_read(info.rtl_path_imu, current_dest_value)) begin
+                    `uvm_info(get_type_name(), $sformatf("IMU destination signal: %s = %0d", info.rtl_path_imu, current_dest_value), UVM_HIGH)
+                end
+            end
+            "IO": begin
+                routing_valid = info.to_io;
+                if (info.rtl_path_io != "" && uvm_hdl_read(info.rtl_path_io, current_dest_value)) begin
+                    `uvm_info(get_type_name(), $sformatf("IO destination signal: %s = %0d", info.rtl_path_io, current_dest_value), UVM_HIGH)
+                end
+            end
+            "OTHER_DIE": begin
+                routing_valid = info.to_other_die;
+                if (info.rtl_path_other_die != "" && uvm_hdl_read(info.rtl_path_other_die, current_dest_value)) begin
+                    `uvm_info(get_type_name(), $sformatf("OTHER_DIE destination signal: %s = %0d", info.rtl_path_other_die, current_dest_value), UVM_HIGH)
+                end
+            end
+        endcase
+
+        // Report routing validation result
+        if (!routing_valid) begin
+            `uvm_error(get_type_name(), $sformatf("🚨 ROUTING ERROR: %s detected at %s but routing not configured!", info.name, dest));
+        end else begin
+            `uvm_info(get_type_name(), $sformatf("✅ Routing valid: %s correctly routed to %s", info.name, dest), UVM_HIGH)
+        end
+
+        `uvm_info(get_type_name(), $sformatf("🔍 === END ROUTING DEBUG: %s ===", info.name), UVM_HIGH)
+    endfunction
+
+    // Debug function to show interrupt configuration summary at startup
+    function void debug_interrupt_configuration();
+        int group_counts[string];
+        int total_interrupts = int_routing_model::interrupt_map.size();
+
+        `uvm_info(get_type_name(), "🔍 === INTERRUPT CONFIGURATION SUMMARY ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("Total interrupts in map: %0d", total_interrupts), UVM_MEDIUM)
+
+        // Count interrupts by group
+        foreach (int_routing_model::interrupt_map[i]) begin
+            string group_name = int_routing_model::interrupt_map[i].group.name();
+            if (group_counts.exists(group_name)) begin
+                group_counts[group_name]++;
+            end else begin
+                group_counts[group_name] = 1;
+            end
+        end
+
+        // Display group statistics
+        `uvm_info(get_type_name(), "Interrupt distribution by group:", UVM_MEDIUM)
+        foreach (group_counts[group]) begin
+            `uvm_info(get_type_name(), $sformatf("  - %s: %0d interrupts", group, group_counts[group]), UVM_MEDIUM)
+        end
+
+        // Show monitoring status
+        `uvm_info(get_type_name(), "Monitor will track all configured interrupt destinations", UVM_MEDIUM)
+        `uvm_info(get_type_name(), "🔍 === END INTERRUPT CONFIGURATION SUMMARY ===", UVM_MEDIUM)
+    endfunction
 
 endclass
 

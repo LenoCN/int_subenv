@@ -53,9 +53,27 @@ class int_base_sequence extends uvm_sequence;
     function void add_expected(interrupt_info_s info);
         int_exp_transaction exp_trans;
         int_sequencer int_seq;
+        string caller_info;
 
-        `uvm_info(get_type_name(), $sformatf("Adding expected interrupt: %s (group: %s, index: %0d, trigger: %s, polarity: %s)",
-                 info.name, info.group.name(), info.index, info.trigger.name(), info.polarity.name()), UVM_MEDIUM)
+        `uvm_info(get_type_name(), "=== SEQUENCE ADDING EXPECTED INTERRUPT ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("Sequence '%s' adding expected interrupt: %s", get_type_name(), info.name), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Group: %s", info.group.name()), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Index: %0d", info.index), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Trigger: %s", info.trigger.name()), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Polarity: %s", info.polarity.name()), UVM_MEDIUM)
+
+        // Show routing configuration
+        `uvm_info(get_type_name(), "Expected routing destinations:", UVM_MEDIUM)
+        if (info.to_ap) `uvm_info(get_type_name(), "  ✅ AP", UVM_MEDIUM);
+        if (info.to_scp) `uvm_info(get_type_name(), "  ✅ SCP", UVM_MEDIUM);
+        if (info.to_mcp) `uvm_info(get_type_name(), "  ✅ MCP", UVM_MEDIUM);
+        if (info.to_imu) `uvm_info(get_type_name(), "  ✅ IMU", UVM_MEDIUM);
+        if (info.to_io) `uvm_info(get_type_name(), "  ✅ IO", UVM_MEDIUM);
+        if (info.to_other_die) `uvm_info(get_type_name(), "  ✅ OTHER_DIE", UVM_MEDIUM);
+
+        if (!info.to_ap && !info.to_scp && !info.to_mcp && !info.to_imu && !info.to_io && !info.to_other_die) begin
+            `uvm_warning(get_type_name(), "  ⚠️  NO DESTINATIONS CONFIGURED - This interrupt will not be expected anywhere!");
+        end
 
         // Cast sequencer to int_sequencer
         if (!$cast(int_seq, m_sequencer)) begin
@@ -65,11 +83,12 @@ class int_base_sequence extends uvm_sequence;
 
         exp_trans = int_exp_transaction::type_id::create("exp_trans");
         exp_trans.interrupt_info = info;
-        
-        `uvm_info(get_type_name(), $sformatf("Writing expected interrupt transaction for %s to scoreboard", info.name), UVM_HIGH)
+
+        `uvm_info(get_type_name(), $sformatf("Sending expected interrupt transaction to scoreboard via TLM port"), UVM_MEDIUM)
         int_seq.expected_port.write(exp_trans);
-        
-        `uvm_info(get_type_name(), $sformatf("Expected interrupt %s successfully registered", info.name), UVM_DEBUG)
+
+        `uvm_info(get_type_name(), $sformatf("✅ Expected interrupt '%s' successfully registered with scoreboard", info.name), UVM_MEDIUM)
+        `uvm_info(get_type_name(), "=== END SEQUENCE EXPECTED INTERRUPT ===", UVM_MEDIUM)
     endfunction
 endclass
 `endif

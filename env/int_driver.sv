@@ -33,17 +33,32 @@ class int_driver extends uvm_driver #(int_stimulus_item);
 
     // Main driver task that selects appropriate stimulus method
     virtual task drive_interrupt(int_stimulus_item item);
-        `uvm_info(get_type_name(), $sformatf("Driving interrupt: %s (trigger: %s, polarity: %s)",
-                  item.interrupt_info.name, item.interrupt_info.trigger.name(), 
-                  item.interrupt_info.polarity.name()), UVM_HIGH)
+        `uvm_info(get_type_name(), "=== DRIVER STIMULUS GENERATION ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("Driving interrupt stimulus: %s", item.interrupt_info.name), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Group: %s", item.interrupt_info.group.name()), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Index: %0d", item.interrupt_info.index), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Trigger: %s", item.interrupt_info.trigger.name()), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Polarity: %s", item.interrupt_info.polarity.name()), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - Stimulus Type: %s", item.stimulus_type.name()), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - RTL Source Path: %s", item.interrupt_info.rtl_path_src), UVM_MEDIUM)
 
         if (item.interrupt_info.rtl_path_src == "") begin
-            `uvm_warning(get_type_name(), $sformatf("Source path for interrupt '%s' is empty. Skipping.", 
+            `uvm_warning(get_type_name(), $sformatf("⚠️  Source path for interrupt '%s' is empty. Skipping stimulus generation.",
                          item.interrupt_info.name));
             return;
         end
 
+        // Show expected destinations for this interrupt
+        `uvm_info(get_type_name(), "Expected destinations for this interrupt:", UVM_MEDIUM)
+        if (item.interrupt_info.to_ap) `uvm_info(get_type_name(), $sformatf("  ✅ AP: %s", item.interrupt_info.rtl_path_ap), UVM_MEDIUM);
+        if (item.interrupt_info.to_scp) `uvm_info(get_type_name(), $sformatf("  ✅ SCP: %s", item.interrupt_info.rtl_path_scp), UVM_MEDIUM);
+        if (item.interrupt_info.to_mcp) `uvm_info(get_type_name(), $sformatf("  ✅ MCP: %s", item.interrupt_info.rtl_path_mcp), UVM_MEDIUM);
+        if (item.interrupt_info.to_imu) `uvm_info(get_type_name(), $sformatf("  ✅ IMU: %s", item.interrupt_info.rtl_path_imu), UVM_MEDIUM);
+        if (item.interrupt_info.to_io) `uvm_info(get_type_name(), $sformatf("  ✅ IO: %s", item.interrupt_info.rtl_path_io), UVM_MEDIUM);
+        if (item.interrupt_info.to_other_die) `uvm_info(get_type_name(), $sformatf("  ✅ OTHER_DIE: %s", item.interrupt_info.rtl_path_other_die), UVM_MEDIUM);
+
         // Select stimulus method based on trigger type and stimulus command
+        `uvm_info(get_type_name(), $sformatf("Generating %s stimulus...", item.stimulus_type.name()), UVM_MEDIUM)
         case (item.stimulus_type)
             STIMULUS_ASSERT: begin
                 case (item.interrupt_info.trigger)
@@ -60,16 +75,23 @@ class int_driver extends uvm_driver #(int_stimulus_item);
                 clear_interrupt_stimulus(item.interrupt_info);
             end
             default: begin
-                `uvm_warning(get_type_name(), $sformatf("Unknown stimulus type for interrupt '%s'", 
+                `uvm_warning(get_type_name(), $sformatf("Unknown stimulus type for interrupt '%s'",
                              item.interrupt_info.name));
             end
         endcase
+
+        `uvm_info(get_type_name(), $sformatf("✅ Stimulus generation completed for: %s", item.interrupt_info.name), UVM_MEDIUM)
+        `uvm_info(get_type_name(), "=== END DRIVER STIMULUS ===", UVM_MEDIUM)
     endtask
 
     // Level-triggered interrupt stimulus
     virtual task drive_level_stimulus(interrupt_info_s info, bit assert_level);
         logic target_value;
-        
+        logic current_value;
+        string action_str = assert_level ? "ASSERT" : "DEASSERT";
+
+        `uvm_info(get_type_name(), $sformatf("Generating LEVEL stimulus (%s) for: %s", action_str, info.name), UVM_MEDIUM)
+
         if (assert_level) begin
             // Assert the interrupt
             if (info.polarity == ACTIVE_HIGH) begin
@@ -91,13 +113,21 @@ class int_driver extends uvm_driver #(int_stimulus_item);
             end
         end
 
+        // Read current value for debugging
+        if (uvm_hdl_read(info.rtl_path_src, current_value)) begin
+            `uvm_info(get_type_name(), $sformatf("Current signal value: %s = %0d", info.rtl_path_src, current_value), UVM_MEDIUM)
+        end
+
         // Apply setup time
+        `uvm_info(get_type_name(), $sformatf("Applying setup time: %0dns", timing_cfg.level_setup_time_ns), UVM_HIGH)
         #(timing_cfg.level_setup_time_ns * 1ns);
 
+        `uvm_info(get_type_name(), $sformatf("Forcing signal: %s = %0d", info.rtl_path_src, target_value), UVM_MEDIUM)
         uvm_hdl_force(info.rtl_path_src, target_value);
-        `uvm_info(get_type_name(), $sformatf("Level stimulus: %s = %b", info.name, target_value), UVM_HIGH)
+        `uvm_info(get_type_name(), $sformatf("✅ Level stimulus applied: %s = %b (%s)", info.name, target_value, action_str), UVM_MEDIUM)
 
         // Apply propagation delay
+        `uvm_info(get_type_name(), $sformatf("Applying propagation delay: %0dns", timing_cfg.propagation_delay_ns), UVM_HIGH)
         #(timing_cfg.propagation_delay_ns * 1ns);
     endtask
 
