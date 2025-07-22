@@ -1,6 +1,6 @@
 {
-  "version": "1.1",
-  "last_updated": "2025-07-21",
+  "version": "1.2",
+  "last_updated": "2025-07-22",
   "description": "Hierarchy configuration for interrupt verification environment",
   
   "base_hierarchy": {
@@ -8,7 +8,8 @@
     "mcp_top": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_mcp_top",
     "scp_top": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_scp_top_wrapper",
     "iosub_int_sub": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_int_sub",
-    "iosub_usb_sub": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_usb_sub"
+    "iosub_usb_sub": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_usb_sub",
+    "smmu_wrapper": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_bus_out_sub.u_smmu_iosub_top_wrap"
   },
   
   "signal_mappings": {
@@ -202,7 +203,8 @@
 
     "SMMU": {
       "description": "System Memory Management Unit interrupts",
-      "base_signal": "iosub_smmu_level_intr",
+      "hierarchy": "smmu_wrapper",
+      "use_interrupt_name_as_signal": true,
       "special_signals": {
         "pulse": "iosub_smmu_pulse_intr",
         "ras": "smmu_ras_intr"
@@ -325,6 +327,12 @@
       "date": "2025-07-21",
       "version": "1.1",
       "changes": "Updated hierarchy paths based on actual DUT structure: AP, SCP, MCP signal paths corrected with proper hierarchy and bit widths",
+      "author": "Augment Agent"
+    },
+    {
+      "date": "2025-07-22",
+      "version": "1.2",
+      "changes": "Fixed SMMU wrapper hierarchy and signal naming: Added smmu_wrapper base hierarchy, updated SMMU interrupt group to use correct hierarchy path, and implemented use_interrupt_name_as_signal feature for direct signal name mapping",
       "author": "Augment Agent"
     }
   ]
