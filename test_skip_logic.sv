@@ -20,6 +20,22 @@ module test_skip_logic;
             return 1;
         end
 
+        // Skip interrupts from SCP that only route to SCP
+        if (info.group == SCP && info.to_scp == 1 &&
+            info.to_ap == 0 && info.to_mcp == 0 && info.to_imu == 0 &&
+            info.to_io == 0 && info.to_other_die == 0) begin
+            $display("Skipping interrupt '%s' - from SCP and only routes to SCP", info.name);
+            return 1;
+        end
+
+        // Skip interrupts from MCP that only route to MCP
+        if (info.group == MCP && info.to_mcp == 1 &&
+            info.to_ap == 0 && info.to_scp == 0 && info.to_imu == 0 &&
+            info.to_io == 0 && info.to_other_die == 0) begin
+            $display("Skipping interrupt '%s' - from MCP and only routes to MCP", info.name);
+            return 1;
+        end
+
         return 0;
     endfunction
     
@@ -67,7 +83,43 @@ module test_skip_logic;
             default: 0
         };
         $display("Test 5 (no destinations - merge source): Skip = %0d", should_skip_interrupt_check(test_int));
-        
+
+        // Test 6: SCP interrupt that only routes to SCP - should be skipped
+        test_int = '{
+            name: "scp_timer64_0_intr",
+            group: SCP,
+            to_ap: 0, to_scp: 1, to_mcp: 0, to_imu: 0, to_io: 0, to_other_die: 0,
+            default: 0
+        };
+        $display("Test 6 (SCP->SCP only): Skip = %0d", should_skip_interrupt_check(test_int));
+
+        // Test 7: MCP interrupt that only routes to MCP - should be skipped
+        test_int = '{
+            name: "mcp_timer64_0_intr",
+            group: MCP,
+            to_ap: 0, to_scp: 0, to_mcp: 1, to_imu: 0, to_io: 0, to_other_die: 0,
+            default: 0
+        };
+        $display("Test 7 (MCP->MCP only): Skip = %0d", should_skip_interrupt_check(test_int));
+
+        // Test 8: SCP interrupt that routes to both SCP and MCP - should NOT be skipped
+        test_int = '{
+            name: "scp_wdt0_ws0",
+            group: SCP,
+            to_ap: 0, to_scp: 1, to_mcp: 1, to_imu: 0, to_io: 0, to_other_die: 0,
+            default: 0
+        };
+        $display("Test 8 (SCP->SCP+MCP): Skip = %0d", should_skip_interrupt_check(test_int));
+
+        // Test 9: MCP interrupt that routes to both SCP and MCP - should NOT be skipped
+        test_int = '{
+            name: "mcp_wdt0_ws0",
+            group: MCP,
+            to_ap: 0, to_scp: 1, to_mcp: 1, to_imu: 0, to_io: 0, to_other_die: 0,
+            default: 0
+        };
+        $display("Test 9 (MCP->SCP+MCP): Skip = %0d", should_skip_interrupt_check(test_int));
+
         $display("=== Test Complete ===");
         $finish;
     end
