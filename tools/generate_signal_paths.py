@@ -124,7 +124,7 @@ class SignalPathGenerator:
             'csub_to_iosub_intr': 21,  # [20:0]
             'psub_to_iosub_intr': 22,  # [21:0]
             'pcie1_to_iosub_intr': 22, # [21:0]
-            'accel_to_iosub_intr': 15, # [14:0]
+            'accel_to_iosub_intr': 15, # [14:0] - for sub_index 5-19 (15 interrupts: 19-5+1=15)
             'd2d_to_iosub_intr': 18,   # [17:0]
             'ddr0_to_iosub_intr': 11,  # [10:0]
             'ddr1_to_iosub_intr': 11,  # [10:0]
@@ -256,6 +256,40 @@ class SignalPathGenerator:
             # For other signals, use the standard source path generation
             return self.generate_source_path(signal_name, group, index)
 
+    def _generate_accel_source_path(self, interrupt_name: str, index: int, base_path: str) -> str:
+        """
+        Generate RTL source path for ACCEL interrupts based on the new requirements:
+        - All accel interrupts use hierarchy: top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap
+        - MHU-related interrupts (sub_index 0, 1, 3, 4): Use individual interrupt names as signals
+        - accel_iosub_imu_ws1_intr (sub_index 2): Use individual signal name at top level
+        - Other interrupts (sub_index 5-19): Use accel_to_iosub_intr[sub_index-5]
+        """
+        # MHU-related interrupts (sub_index 0, 1, 3, 4) - use individual signal names at iosub_int_sub level
+        mhu_interrupts = {
+            'accel_iosub_scp2imu_mhu_send_intr',      # sub_index 0
+            'accel_iosub_imu2scp_mhu_receive_intr',   # sub_index 1
+            'accel_iosub_mcp2imu_mhu_send_intr',      # sub_index 3
+            'accel_iosub_imu2mcp_mhu_receive_intr'    # sub_index 4
+        }
+
+        if interrupt_name in mhu_interrupts:
+            # MHU interrupts are at iosub_int_sub level
+            # Get the iosub_int_sub hierarchy from base_hierarchy
+            iosub_int_sub_path = self.base_hierarchy.get('iosub_int_sub', '')
+            return f"{iosub_int_sub_path}.{interrupt_name}"
+        elif interrupt_name == 'accel_iosub_imu_ws1_intr':
+            # accel_iosub_imu_ws1_intr (sub_index 2) is at top level
+            return f"{base_path}.{interrupt_name}"
+        else:
+            # For other ACCEL interrupts (sub_index 5-19), use accel_to_iosub_intr[sub_index-5]
+            # Calculate the bit index: sub_index - 5
+            bit_index = index - 5
+            if bit_index < 0:
+                # This shouldn't happen for properly configured interrupts
+                print(f"Warning: ACCEL interrupt {interrupt_name} has index {index} < 5, using index 0")
+                bit_index = 0
+            return f"{base_path}.accel_to_iosub_intr[{bit_index}]"
+
     def generate_source_path(self, interrupt_name: str, group: str, index: int) -> str:
         """
         Generate the RTL source path for stimulus based on interrupt name and group.
@@ -266,6 +300,10 @@ class SignalPathGenerator:
         # Select appropriate hierarchy for stimulus
         hierarchy_key = self.select_hierarchy_for_signal(interrupt_name, group, "stimulus")
         base_path = self.base_hierarchy.get(hierarchy_key, self.base_hierarchy.get('iosub_top', ''))
+
+        # Special handling for ACCEL group
+        if group == 'ACCEL':
+            return self._generate_accel_source_path(interrupt_name, index, base_path)
 
         # Check if group is defined in configuration
         if group in self.interrupt_groups:
