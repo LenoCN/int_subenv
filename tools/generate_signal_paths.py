@@ -275,12 +275,23 @@ class SignalPathGenerator:
             if 'special_signals' in group_config:
                 for special_key, signal_name in group_config['special_signals'].items():
                     if special_key in interrupt_name:
-                        if signal_name.endswith('_intr') and '[' not in signal_name:
-                            # Single bit signal
-                            return f"{base_path}.{signal_name}"
+                        # Check if this signal has a special hierarchy
+                        if 'special_hierarchy' in group_config and special_key in group_config['special_hierarchy']:
+                            special_hierarchy_key = group_config['special_hierarchy'][special_key]
+                            special_base_path = self.base_hierarchy.get(special_hierarchy_key, base_path)
+                            if signal_name.endswith('_intr') and '[' not in signal_name:
+                                # Single bit signal
+                                return f"{special_base_path}.{signal_name}"
+                            else:
+                                # Multi-bit signal - for USB apb1ton interrupts, they are single bit signals
+                                return f"{special_base_path}.{signal_name}"
                         else:
-                            # Multi-bit signal
-                            return f"{base_path}.{signal_name}[{index}]"
+                            if signal_name.endswith('_intr') and '[' not in signal_name:
+                                # Single bit signal
+                                return f"{base_path}.{signal_name}"
+                            else:
+                                # Multi-bit signal
+                                return f"{base_path}.{signal_name}[{index}]"
 
             # Use base signal for the group
             base_signal = group_config.get('base_signal', f"{group.lower()}_to_iosub_intr")
