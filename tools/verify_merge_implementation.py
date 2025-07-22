@@ -86,6 +86,11 @@ def extract_expected_merge_from_csv(csv_file_path):
             "iodap_etr_buf_intr",
             "iodap_catu_addrerr_intr"
         ],
+
+        "iosub_abnormal_1_intr": [
+            # Reserved merge signal with no sources
+            # This is intentionally empty as it's reserved for future use
+        ],
         
         "merge_external_pll_intr": [
             "accel_pll_lock_intr",
