@@ -9,7 +9,8 @@
     "scp_top": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_scp_top_wrapper",
     "iosub_int_sub": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_int_sub",
     "iosub_usb_sub": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_usb_sub",
-    "smmu_wrapper": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_bus_out_sub.u_smmu_iosub_top_wrap"
+    "smmu_wrapper": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_bus_out_sub.u_smmu_iosub_top_wrap",
+    "iodap": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iodap"
   },
   
   "signal_mappings": {
@@ -26,7 +27,7 @@
       "csub_iosub_pll_intdocfrac_err_intr": "csub_iosub_pll_intdocfrac_err_intr",
       "csub_to_iosub_intr": "csub_to_iosub_intr",
       "psub_to_iosub_intr": "psub_to_iosub_intr",
-      "pciel_to_iosub_intr": "pciel_to_iosub_intr",
+      "pcie1_to_iosub_intr": "pcie1_to_iosub_intr",
       "accel_to_iosub_intr": "accel_to_iosub_intr",
       "d2d_to_iosub_intr": "d2d_to_iosub_intr",
       "ddr0_to_iosub_intr": "ddr0_to_iosub_intr",
@@ -63,7 +64,7 @@
       "csub_iosub_pll_intdocfrac_err_intr": "csub_iosub_pll_intdocfrac_err_intr",
       "csub_to_iosub_intr": "csub_to_iosub_intr",
       "psub_to_iosub_intr": "psub_to_iosub_intr",
-      "pciel_to_iosub_intr": "pciel_to_iosub_intr",
+      "pcie1_to_iosub_intr": "pcie1_to_iosub_intr",
       "accel_to_iosub_intr": "accel_to_iosub_intr",
       "d2d_to_iosub_intr": "d2d_to_iosub_intr",
       "ddr0_to_iosub_intr": "ddr0_to_iosub_intr",
@@ -99,7 +100,7 @@
     "csub_iosub_pll_intdocfrac_err_intr": 17,
     "csub_to_iosub_intr": 21,
     "psub_to_iosub_intr": 22,
-    "pciel_to_iosub_intr": 22,
+    "pcie1_to_iosub_intr": 22,
     "accel_to_iosub_intr": 15,
     "d2d_to_iosub_intr": 18,
     "ddr0_to_iosub_intr": 11,
@@ -136,7 +137,7 @@
     
     "PCIE1": {
       "description": "PCIe lane 1 interrupts",
-      "base_signal": "pciel_to_iosub_intr"
+      "base_signal": "pcie1_to_iosub_intr"
     },
     
     "ACCEL": {
@@ -213,6 +214,15 @@
 
     "IODAP": {
       "description": "IO Debug Access Port interrupts",
+      "hierarchy": "iodap",
+      "use_interrupt_name_as_signal": true,
+      "special_signals": {
+        "iodap_chk_err_etf0": "chk_err_etf0",
+        "iodap_chk_err_etf1": "chk_err_etf1",
+        "iodap_etr_buf_intr": "etr_bufintr",
+        "iodap_catu_addrerr_intr": "catu_addrerr",
+        "iodap_sdc600_intr": "sdc600_intr"
+      },
       "base_signal": "iosub_dap_intr"
     },
 
@@ -270,7 +280,7 @@
       "cross_boundary_check": "iosub_int_sub"
     },
     "signal_type_mapping": {
-      "external_inputs": ["PSUB", "DDR0", "DDR1", "DDR2", "ACCEL", "CSUB", "PCIEL", "D2D"],
+      "external_inputs": ["PSUB", "DDR0", "DDR1", "DDR2", "ACCEL", "CSUB", "pcie1", "D2D"],
       "mcp_signals": ["MCP"],
       "scp_signals": ["SCP"],
       "internal_signals": ["IOSUB", "USB", "SMMU", "IODAP", "IO_DIE"],
@@ -290,7 +300,7 @@
       "IO_DIE": "pad_int_i",
       "CSUB": "csub_to_iosub_intr",
       "PSUB": "psub_to_iosub_intr",
-      "PCIE1": "pciel_to_iosub_intr",
+      "PCIE1": "pcie1_to_iosub_intr",
       "ACCEL": "accel_to_iosub_intr",
       "D2D": "d2d_to_iosub_intr",
       "DDR0": "ddr0_to_iosub_intr",
