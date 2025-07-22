@@ -12,6 +12,8 @@ class int_lightweight_sequence extends int_base_sequence;
 
     // Helper function to check if interrupt routing should be skipped
     // Skip interrupts that only route to other_die or io destinations
+    // Skip interrupts from SCP that only route to SCP
+    // Skip interrupts from MCP that only route to MCP
     // NOTE: Do NOT skip interrupts with no destinations as they are merge sources
     virtual function bit should_skip_interrupt_check(interrupt_info_s info);
         bit has_other_destinations = 0;
@@ -26,6 +28,24 @@ class int_lightweight_sequence extends int_base_sequence;
         if (!has_other_destinations && (info.to_other_die || info.to_io)) begin
             `uvm_info(get_type_name(), $sformatf("Skipping interrupt '%s' - only routes to other_die(%0d) or io(%0d)",
                      info.name, info.to_other_die, info.to_io), UVM_MEDIUM)
+            return 1;
+        end
+
+        // Skip interrupts from SCP that only route to SCP
+        if (info.group == SCP && info.to_scp == 1 &&
+            info.to_ap == 0 && info.to_mcp == 0 && info.to_imu == 0 &&
+            info.to_io == 0 && info.to_other_die == 0) begin
+            `uvm_info(get_type_name(), $sformatf("Skipping interrupt '%s' - from SCP and only routes to SCP",
+                     info.name), UVM_MEDIUM)
+            return 1;
+        end
+
+        // Skip interrupts from MCP that only route to MCP
+        if (info.group == MCP && info.to_mcp == 1 &&
+            info.to_ap == 0 && info.to_scp == 0 && info.to_imu == 0 &&
+            info.to_io == 0 && info.to_other_die == 0) begin
+            `uvm_info(get_type_name(), $sformatf("Skipping interrupt '%s' - from MCP and only routes to MCP",
+                     info.name), UVM_MEDIUM)
             return 1;
         end
 
