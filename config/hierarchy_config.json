@@ -191,7 +191,7 @@
     
     "IOSUB": {
       "description": "IO subsystem internal interrupts",
-      "base_signal": "internal_interrupt_sources"
+      "base_signal": "iosub_peri_intr"
     },
 
     "USB": {
