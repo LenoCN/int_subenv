@@ -18,7 +18,8 @@ class int_base_sequence extends uvm_sequence;
         `uvm_info(get_type_name(), "Starting interrupt sequence initialization", UVM_LOW)
 
         // Get event manager from config DB
-        if (!uvm_config_db#(int_event_manager)::get(null, "*", "event_manager", event_manager)) begin
+        // Use m_sequencer as the starting point since event_manager is set in the subenv
+        if (!uvm_config_db#(int_event_manager)::get(m_sequencer, "", "event_manager", event_manager)) begin
             `uvm_error(get_type_name(), "Failed to get event_manager from config DB")
         end else begin
             `uvm_info(get_type_name(), "Successfully retrieved event_manager from config DB", UVM_HIGH)
