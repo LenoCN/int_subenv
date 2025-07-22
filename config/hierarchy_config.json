@@ -203,8 +203,8 @@
 
     "SMMU": {
       "description": "System Memory Management Unit interrupts",
-      "base_signal": "iosub_smmu_level_intr",
       "hierarchy": "smmu_wrapper",
+      "use_interrupt_name_as_signal": true,
       "special_signals": {
         "pulse": "iosub_smmu_pulse_intr",
         "ras": "smmu_ras_intr"
@@ -332,7 +332,7 @@
     {
       "date": "2025-07-22",
       "version": "1.2",
-      "changes": "Added SMMU wrapper hierarchy support: Added smmu_wrapper base hierarchy and updated SMMU interrupt group to use correct hierarchy path",
+      "changes": "Fixed SMMU wrapper hierarchy and signal naming: Added smmu_wrapper base hierarchy, updated SMMU interrupt group to use correct hierarchy path, and implemented use_interrupt_name_as_signal feature for direct signal name mapping",
       "author": "Augment Agent"
     }
   ]

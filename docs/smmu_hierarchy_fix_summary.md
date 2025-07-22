@@ -56,8 +56,8 @@ top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_io
 ```json
 "SMMU": {
   "description": "System Memory Management Unit interrupts",
-  "base_signal": "iosub_smmu_level_intr",
   "hierarchy": "smmu_wrapper",
+  "use_interrupt_name_as_signal": true,
   "special_signals": {
     "pulse": "iosub_smmu_pulse_intr",
     "ras": "smmu_ras_intr"
@@ -65,15 +65,23 @@ top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_io
 }
 ```
 
+关键变化：
+- 移除了`base_signal`字段
+- 添加了`use_interrupt_name_as_signal: true`，表示直接使用中断名称作为信号名
+
 ### 2. 路径生成逻辑修改 (tools/generate_signal_paths.py)
 
-在`generate_source_path`方法中添加对中断组特定层次结构的支持：
+在`generate_source_path`方法中添加对中断组特定层次结构和信号名的支持：
 
 ```python
 # Check if group has a specific hierarchy override
 group_hierarchy = group_config.get('hierarchy', '')
 if group_hierarchy and group_hierarchy in self.base_hierarchy:
     base_path = self.base_hierarchy[group_hierarchy]
+
+# Check if this group uses interrupt name as signal name directly
+if group_config.get('use_interrupt_name_as_signal', False):
+    return f"{base_path}.{interrupt_name}"
 ```
 
 ## 修复结果
@@ -83,10 +91,20 @@ if group_hierarchy and group_hierarchy in self.base_hierarchy:
 top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_int_sub.iosub_smmu_level_intr[X]
 ```
 
+问题：
+1. 缺少SMMU wrapper层次：`u_iosub_bus_out_sub.u_smmu_iosub_top_wrap`
+2. 使用了错误的信号名格式：`iosub_smmu_level_intr[X]`而不是实际的中断名称
+
 ### 修复后的SMMU路径：
 ```
-top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_bus_out_sub.u_smmu_iosub_top_wrap.iosub_smmu_level_intr[X]
+top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_bus_out_sub.u_smmu_iosub_top_wrap.{interrupt_name}
 ```
+
+其中`{interrupt_name}`直接使用Excel中的中断名称，例如：
+- `intr_tcu_ups_event_q_irpt_s`
+- `smmu_abnormal_intr`
+- `smmu_normal_intr_ns`
+等等
 
 ## 验证结果
 

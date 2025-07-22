@@ -276,6 +276,10 @@ class SignalPathGenerator:
             if group_hierarchy and group_hierarchy in self.base_hierarchy:
                 base_path = self.base_hierarchy[group_hierarchy]
 
+            # Check if this group uses interrupt name as signal name directly
+            if group_config.get('use_interrupt_name_as_signal', False):
+                return f"{base_path}.{interrupt_name}"
+
             # Check for special signals first
             if 'special_signals' in group_config:
                 for special_key, signal_name in group_config['special_signals'].items():
