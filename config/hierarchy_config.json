@@ -7,7 +7,8 @@
     "iosub_top": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap",
     "mcp_top": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_mcp_top",
     "scp_top": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_scp_top_wrapper",
-    "iosub_int_sub": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_int_sub"
+    "iosub_int_sub": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_int_sub",
+    "iosub_usb_sub": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_usb_sub"
   },
   
   "signal_mappings": {
@@ -186,7 +187,17 @@
 
     "USB": {
       "description": "USB controller interrupts",
-      "base_signal": "iosub_usb_intr"
+      "base_signal": "iosub_usb_intr",
+      "special_signals": {
+        "usb0_apb1ton_intr": "usb0_apb1ton_intr",
+        "usb1_apb1ton_intr": "usb1_apb1ton_intr",
+        "usb_top_apb1ton_intr": "usb_top_apb1ton_intr"
+      },
+      "special_hierarchy": {
+        "usb0_apb1ton_intr": "iosub_usb_sub",
+        "usb1_apb1ton_intr": "iosub_usb_sub",
+        "usb_top_apb1ton_intr": "iosub_usb_sub"
+      }
     },
 
     "SMMU": {
