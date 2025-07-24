@@ -2,6 +2,11 @@
 """
 Excel-based interrupt vector table converter.
 Converts int_vector.xlsx to SystemVerilog routing model with comprehensive signal mapping.
+
+Data Sources:
+- IOSUB中断源: IOSUB group interrupts (excluding SCP/MCP)
+- MSCP-to-IOSUB中断: SCP and MCP group interrupts
+- Destination sheets: Interrupt index mappings for each target
 """
 
 import pandas as pd
@@ -96,7 +101,64 @@ class InterruptInfo:
         return entry_str
 
 def parse_main_sheet(df: pd.DataFrame) -> Dict[str, InterruptInfo]:
-    """Parse the main IOSUB中断源 sheet."""
+    """Parse the main IOSUB中断源 sheet, excluding SCP and MCP groups."""
+    interrupts = {}
+    current_group = ""
+
+    for idx, row in df.iterrows():
+        # Check for group header first (before checking for empty interrupt name)
+        if pd.notna(row['interrupt Source']) and pd.isna(row['sub index']):
+            group_name = str(row['interrupt Source']).strip()
+            if group_name in GROUP_MAP:
+                current_group = GROUP_MAP[group_name]
+                # Skip SCP and MCP groups - they will be processed from MSCP-to-IOSUB sheet
+                if current_group in ['SCP', 'MCP']:
+                    continue
+            continue
+
+        # Skip empty rows
+        if pd.isna(row['Interrupt Name']) or row['Interrupt Name'] == '':
+            continue
+
+        # Skip SCP and MCP group entries
+        if current_group in ['SCP', 'MCP']:
+            continue
+
+        # Parse interrupt entry
+        if pd.notna(row['Interrupt Name']) and pd.notna(row['sub index']):
+            name = str(row['Interrupt Name']).strip()
+            index = int(float(row['sub index']))
+
+            # Sanitize name
+            name_sanitized = re.sub(r'(\s*\[\d+:\d+\]\s*)|(\s*\[\d+\]\s*)', '', name).strip()
+            name_sanitized = name_sanitized.replace(' ', '_')
+
+            # Map trigger and polarity
+            trigger_str = str(row['Trigger']).strip() if pd.notna(row['Trigger']) else ""
+            polarity_str = str(row[' Polarity']).strip() if pd.notna(row[' Polarity']) else ""
+
+            trigger = TRIGGER_MAP.get(trigger_str, "UNKNOWN_TRIGGER")
+            if "Pulse" in trigger_str:
+                trigger = "EDGE"
+            polarity = POLARITY_MAP.get(polarity_str, "UNKNOWN_POLARITY")
+
+            # Create interrupt info
+            if not current_group:
+                current_group = "UNKNOWN_GROUP"
+            interrupt_info = InterruptInfo(name_sanitized, index, current_group, trigger, polarity)
+
+            # Check routing destinations
+            for dest_col, dest_name in [('to AP?', 'AP'), ('to SCP?', 'SCP'), ('to MCP?', 'MCP'),
+                                       ('to IMU?', 'IMU'), ('to IO?', 'IO'), ('to other DIE?', 'OTHER_DIE')]:
+                if pd.notna(row[dest_col]) and ('Y' in str(row[dest_col]).upper() or 'P' in str(row[dest_col]).upper()):
+                    interrupt_info.add_destination(dest_name, -1)  # Will be filled later
+
+            interrupts[name_sanitized] = interrupt_info
+
+    return interrupts
+
+def parse_mscp_sheet(df: pd.DataFrame) -> Dict[str, InterruptInfo]:
+    """Parse the MSCP-to-IOSUB中断 sheet for SCP and MCP interrupt sources."""
     interrupts = {}
     current_group = ""
 
@@ -111,38 +173,40 @@ def parse_main_sheet(df: pd.DataFrame) -> Dict[str, InterruptInfo]:
         # Skip empty rows
         if pd.isna(row['Interrupt Name']) or row['Interrupt Name'] == '':
             continue
-            
+
+        # Only process SCP and MCP groups
+        if current_group not in ['SCP', 'MCP']:
+            continue
+
         # Parse interrupt entry
         if pd.notna(row['Interrupt Name']) and pd.notna(row['sub index']):
             name = str(row['Interrupt Name']).strip()
             index = int(float(row['sub index']))
-            
+
             # Sanitize name
             name_sanitized = re.sub(r'(\s*\[\d+:\d+\]\s*)|(\s*\[\d+\]\s*)', '', name).strip()
             name_sanitized = name_sanitized.replace(' ', '_')
-            
+
             # Map trigger and polarity
             trigger_str = str(row['Trigger']).strip() if pd.notna(row['Trigger']) else ""
             polarity_str = str(row[' Polarity']).strip() if pd.notna(row[' Polarity']) else ""
-            
+
             trigger = TRIGGER_MAP.get(trigger_str, "UNKNOWN_TRIGGER")
-            if "Pulse" in trigger_str: 
+            if "Pulse" in trigger_str:
                 trigger = "EDGE"
             polarity = POLARITY_MAP.get(polarity_str, "UNKNOWN_POLARITY")
-            
+
             # Create interrupt info
-            if not current_group:
-                current_group = "UNKNOWN_GROUP"
             interrupt_info = InterruptInfo(name_sanitized, index, current_group, trigger, polarity)
-            
+
             # Check routing destinations
-            for dest_col, dest_name in [('to AP?', 'AP'), ('to SCP?', 'SCP'), ('to MCP?', 'MCP'), 
-                                       ('to IMU?', 'IMU'), ('to IO?', 'IO'), ('to other DIE?', 'OTHER_DIE')]:
+            for dest_col, dest_name in [('to AP?', 'AP'), ('to SCP?', 'SCP'), ('to MCP?', 'MCP'),
+                                       ('to IMU?', 'IMU'), ('to IO?', 'IO')]:
                 if pd.notna(row[dest_col]) and ('Y' in str(row[dest_col]).upper() or 'P' in str(row[dest_col]).upper()):
                     interrupt_info.add_destination(dest_name, -1)  # Will be filled later
-                    
+
             interrupts[name_sanitized] = interrupt_info
-            
+
     return interrupts
 
 def parse_destination_sheet(df: pd.DataFrame, sheet_name: str) -> Dict[str, int]:
@@ -305,22 +369,36 @@ def parse_destination_sheet(df: pd.DataFrame, sheet_name: str) -> Dict[str, int]
 def parse_interrupt_xlsx(input_path: str, output_path: str):
     """Parse the Excel file and generate SystemVerilog routing model."""
     try:
-        # Read main sheet
+        # Read main sheet (excluding SCP and MCP groups)
         df_main = pd.read_excel(input_path, sheet_name='IOSUB中断源')
         interrupts = parse_main_sheet(df_main)
-        
-        print(f"Parsed {len(interrupts)} interrupts from main sheet")
-        
-        # Read destination sheets and update interrupt mappings
+
+        print(f"Parsed {len(interrupts)} interrupts from IOSUB中断源 sheet (excluding SCP/MCP)")
+
+        # Read MSCP-to-IOSUB sheet for SCP and MCP interrupts
         xl = pd.ExcelFile(input_path)
+        if 'MSCP-to-IOSUB中断' in xl.sheet_names:
+            print("Processing MSCP-to-IOSUB中断 sheet for SCP and MCP interrupts")
+            df_mscp = pd.read_excel(input_path, sheet_name='MSCP-to-IOSUB中断')
+            mscp_interrupts = parse_mscp_sheet(df_mscp)
+
+            print(f"Parsed {len(mscp_interrupts)} SCP/MCP interrupts from MSCP-to-IOSUB中断 sheet")
+
+            # Merge MSCP interrupts with main interrupts
+            interrupts.update(mscp_interrupts)
+            print(f"Total interrupts after merging: {len(interrupts)}")
+        else:
+            print("Warning: MSCP-to-IOSUB中断 sheet not found, SCP/MCP interrupts will be missing")
+
+        # Read destination sheets and update interrupt mappings
         for dest_name, sheet_name in DEST_SHEET_MAP.items():
             if sheet_name in xl.sheet_names:
                 print(f"Processing destination sheet: {sheet_name}")
                 df_dest = pd.read_excel(input_path, sheet_name=sheet_name)
                 dest_indices = parse_destination_sheet(df_dest, sheet_name)
-                
+
                 print(f"Found {len(dest_indices)} interrupt mappings in {sheet_name}")
-                
+
                 # Update interrupt destinations
                 for interrupt_name, dest_index in dest_indices.items():
                     if interrupt_name in interrupts:
@@ -328,10 +406,10 @@ def parse_interrupt_xlsx(input_path: str, output_path: str):
                             # Update with actual destination index
                             signal_path = f"// {sheet_name}[{dest_index}]"
                             interrupts[interrupt_name].destinations[dest_name] = (dest_index, signal_path)
-                            
+
         # Generate SystemVerilog file
         generate_sv_file(interrupts, output_path, input_path)
-        
+
     except Exception as e:
         print(f"Error processing Excel file: {e}")
         raise
