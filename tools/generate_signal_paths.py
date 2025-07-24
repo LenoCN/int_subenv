@@ -350,7 +350,10 @@ class SignalPathGenerator:
 
             # Check if this group uses interrupt name as signal name directly (after special signals check)
             if group_config.get('use_interrupt_name_as_signal', False):
-                return f"{base_path}.{interrupt_name}"
+                # Check if there's a signal name prefix to add
+                signal_prefix = group_config.get('signal_name_prefix', '')
+                signal_name = f"{signal_prefix}{interrupt_name}"
+                return f"{base_path}.{signal_name}"
 
             # Use base signal for the group
             base_signal = group_config.get('base_signal', f"{group.lower()}_to_iosub_intr")
