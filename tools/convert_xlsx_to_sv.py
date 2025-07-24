@@ -13,20 +13,20 @@ from typing import Dict, List, Tuple, Optional
 # --- Mappings ---
 GROUP_MAP = {
     "IOSUB中断源": "IOSUB",
-    "USB中断源": "USB", 
+    "USB中断源": "USB",
     "SCP中断源": "SCP",
     "MCP中断源": "MCP",
     "SMMU中断源": "SMMU",
     "IODAP中断源": "IODAP",
     "外部中断源-from ACCEL": "ACCEL",
-    "外部中断源-from CSUB": "CSUB", 
+    "外部中断源-from CSUB": "CSUB",
     "外部中断源-from PSUB": "PSUB",
     "外部中断源-from PCIE1": "PCIE1",
     "外部中断源-from D2D": "D2D",
     "外部中断源-from DDR0": "DDR0",
     "外部中断源-from DDR1": "DDR1",
     "外部中断源-from ddr2": "DDR2",
-    "外部中断源-from IO DIE": "IO_DIE"
+    # "外部中断源-from IO DIE": "IO_DIE"  # 移除IO DIE处理
 }
 
 TRIGGER_MAP = {
@@ -106,10 +106,17 @@ def parse_main_sheet(df: pd.DataFrame) -> Dict[str, InterruptInfo]:
             group_name = str(row['interrupt Source']).strip()
             if group_name in GROUP_MAP:
                 current_group = GROUP_MAP[group_name]
+            elif group_name == "外部中断源-from IO DIE":
+                # 跳过IO DIE组的处理
+                current_group = "SKIP_IO_DIE"
             continue
 
         # Skip empty rows
         if pd.isna(row['Interrupt Name']) or row['Interrupt Name'] == '':
+            continue
+
+        # Skip IO DIE group interrupts
+        if current_group == "SKIP_IO_DIE":
             continue
             
         # Parse interrupt entry
@@ -356,6 +363,10 @@ def generate_sv_file(interrupts: Dict[str, InterruptInfo], output_path: str, inp
 
     # Generate entries grouped by interrupt group (without function wrapper)
     for group_name, group_interrupts in grouped_interrupts.items():
+        # Skip IO_DIE group
+        if group_name == "IO_DIE":
+            continue
+
         sv_lines.append(f"        // --- Start of {group_name} interrupts ---")
 
         # Sort by index
