@@ -213,6 +213,7 @@
       "description": "System Memory Management Unit interrupts",
       "hierarchy": "smmu_wrapper",
       "use_interrupt_name_as_signal": true,
+      "signal_name_prefix": "o_",
       "special_signals": {
         "pulse": "iosub_smmu_pulse_intr",
         "ras": "smmu_ras_intr"
@@ -350,6 +351,12 @@
       "date": "2025-07-22",
       "version": "1.2",
       "changes": "Fixed SMMU wrapper hierarchy and signal naming: Added smmu_wrapper base hierarchy, updated SMMU interrupt group to use correct hierarchy path, and implemented use_interrupt_name_as_signal feature for direct signal name mapping",
+      "author": "Augment Agent"
+    },
+    {
+      "date": "2025-07-24",
+      "version": "1.3",
+      "changes": "Added signal_name_prefix support for SMMU interrupts: SMMU interrupt signal names now use 'o_' prefix before interrupt name to match actual RTL signal naming convention",
       "author": "Augment Agent"
     }
   ]
