@@ -47,7 +47,7 @@ class comprehensive_merge_sequence extends int_base_sequence;
         all_merge_interrupts = {
             // Original PLL merge interrupts
             "merge_pll_intr_lock",
-            "merge_pll_intr_unlock", 
+            "merge_pll_intr_unlock",
             "merge_pll_intr_frechangedone",
             "merge_pll_intr_frechange_tot_done",
             "merge_pll_intr_intdocfrac_err",
@@ -58,6 +58,7 @@ class comprehensive_merge_sequence extends int_base_sequence;
             "iosub_ras_eri_intr",
             "iosub_ras_fhi_intr",
             "iosub_abnormal_0_intr",
+            "iosub_abnormal_1_intr",
             "merge_external_pll_intr"
         };
         
@@ -125,6 +126,7 @@ class comprehensive_merge_sequence extends int_base_sequence;
             "iosub_ras_eri_intr": test_passed &= verify_ras_eri_sources(merge_sources);
             "iosub_ras_fhi_intr": test_passed &= verify_ras_fhi_sources(merge_sources);
             "iosub_abnormal_0_intr": test_passed &= verify_abnormal_sources(merge_sources);
+            "iosub_abnormal_1_intr": test_passed &= verify_abnormal_1_sources(merge_sources);
             "merge_external_pll_intr": test_passed &= verify_external_pll_sources(merge_sources);
             default: begin
                 // For PLL merge interrupts, just verify they have sources
@@ -181,6 +183,18 @@ class comprehensive_merge_sequence extends int_base_sequence;
     virtual function bit verify_abnormal_sources(interrupt_info_s sources[$]);
         string expected_sources[$] = {"iodap_etr_buf_intr", "iodap_catu_addrerr_intr"};
         return verify_sources_contain_expected(sources, expected_sources, "iosub_abnormal_0_intr");
+    endfunction
+
+    virtual function bit verify_abnormal_1_sources(interrupt_info_s sources[$]);
+        // iosub_abnormal_1_intr is a reserved merge signal with no sources
+        // Verify that it has no sources (empty list)
+        if (sources.size() == 0) begin
+            `uvm_info("COMP_MERGE_SEQ", "✅ iosub_abnormal_1_intr correctly has no sources (reserved)", UVM_MEDIUM)
+            return 1;
+        end else begin
+            `uvm_warning("COMP_MERGE_SEQ", $sformatf("iosub_abnormal_1_intr should have no sources but found %0d", sources.size()))
+            return 0;
+        end
     endfunction
     
     virtual function bit verify_external_pll_sources(interrupt_info_s sources[$]);
