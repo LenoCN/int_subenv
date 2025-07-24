@@ -207,6 +207,12 @@ class int_routing_model;
                 end
             end
 
+            "iosub_abnormal_1_intr": begin
+                // iosub_abnormal_1_intr is a reserved merge signal with no sources
+                // This is intentionally empty as it's reserved for future use
+                // No sources to collect for this merge signal
+            end
+
             "merge_external_pll_intr": begin
                 // Collect all external PLL interrupts that should be merged
                 foreach (interrupt_map[i]) begin
@@ -250,6 +256,7 @@ class int_routing_model;
                 interrupt_name == "iosub_ras_eri_intr" ||
                 interrupt_name == "iosub_ras_fhi_intr" ||
                 interrupt_name == "iosub_abnormal_0_intr" ||
+                interrupt_name == "iosub_abnormal_1_intr" ||
                 interrupt_name == "merge_external_pll_intr");
     endfunction
 

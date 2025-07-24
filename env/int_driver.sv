@@ -48,6 +48,14 @@ class int_driver extends uvm_driver #(int_stimulus_item);
             return;
         end
 
+        // Check if this is a merge interrupt - merge interrupts should not be directly stimulated
+        if (is_merge_interrupt(item.interrupt_info.name)) begin
+            `uvm_warning(get_type_name(), $sformatf("⚠️  Interrupt '%s' is a merge signal. Merge signals should not be directly stimulated. Skipping stimulus generation.",
+                         item.interrupt_info.name));
+            `uvm_info(get_type_name(), "💡 To test merge signals, stimulate their source interrupts instead.", UVM_MEDIUM)
+            return;
+        end
+
         // Show expected destinations for this interrupt
         `uvm_info(get_type_name(), "Expected destinations for this interrupt:", UVM_MEDIUM)
         if (item.interrupt_info.to_ap) `uvm_info(get_type_name(), $sformatf("  ✅ AP: %s", item.interrupt_info.rtl_path_ap), UVM_MEDIUM);
@@ -198,6 +206,25 @@ class int_driver extends uvm_driver #(int_stimulus_item);
         `uvm_info(get_type_name(), $sformatf("Cleared interrupt stimulus for '%s'", info.name), UVM_HIGH)
         #(timing_cfg.clear_propagation_delay_ns * 1ns); // Configurable propagation delay
     endtask
+
+    // Function to check if an interrupt is a merge interrupt
+    // Merge interrupts should not be directly stimulated
+    virtual function bit is_merge_interrupt(string interrupt_name);
+        return (interrupt_name == "merge_pll_intr_lock" ||
+                interrupt_name == "merge_pll_intr_unlock" ||
+                interrupt_name == "merge_pll_intr_frechangedone" ||
+                interrupt_name == "merge_pll_intr_frechange_tot_done" ||
+                interrupt_name == "merge_pll_intr_intdocfrac_err" ||
+                // New merge interrupts from CSV analysis
+                interrupt_name == "iosub_normal_intr" ||
+                interrupt_name == "iosub_slv_err_intr" ||
+                interrupt_name == "iosub_ras_cri_intr" ||
+                interrupt_name == "iosub_ras_eri_intr" ||
+                interrupt_name == "iosub_ras_fhi_intr" ||
+                interrupt_name == "iosub_abnormal_0_intr" ||
+                interrupt_name == "iosub_abnormal_1_intr" ||
+                interrupt_name == "merge_external_pll_intr");
+    endfunction
 
 endclass
 
