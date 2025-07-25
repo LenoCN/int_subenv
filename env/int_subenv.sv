@@ -27,6 +27,8 @@ class int_subenv extends soc_base_subenv;
         // Share the event pool through configuration database
         uvm_config_db#(uvm_event_pool)::set(this, "m_monitor", "interrupt_event_pool", m_event_manager.get_event_pool());
         uvm_config_db#(int_event_manager)::set(this, "*", "event_manager", m_event_manager);
+        // Also set event_manager specifically for monitor to handle race conditions
+        uvm_config_db#(int_event_manager)::set(this, "m_monitor", "event_manager", m_event_manager);
     endfunction
 
     function void connect_phase(uvm_phase phase);

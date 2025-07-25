@@ -12,6 +12,9 @@ class int_monitor extends uvm_monitor;
     // Key format: "interrupt_name@destination"
     uvm_event_pool interrupt_detected_events;
 
+    // Event manager for race condition handling
+    int_event_manager event_manager;
+
     // Timing configuration
     timing_config timing_cfg;
 
@@ -30,6 +33,11 @@ class int_monitor extends uvm_monitor;
         if(!uvm_config_db#(uvm_event_pool)::get(this, "", "interrupt_event_pool", interrupt_detected_events)) begin
             `uvm_info(get_type_name(), "No event pool found in config DB, creating new one", UVM_MEDIUM)
             interrupt_detected_events = new("interrupt_detected_events");
+        end
+
+        // Get event manager from configuration database for race condition handling
+        if(!uvm_config_db#(int_event_manager)::get(this, "", "event_manager", event_manager)) begin
+            `uvm_warning(get_type_name(), "No event_manager found in config DB, race condition handling disabled")
         end
 
         // Initialize timing configuration
@@ -198,6 +206,13 @@ class int_monitor extends uvm_monitor;
         // Create event key and trigger event for handshake
         event_key = $sformatf("%s@%s", info.name, dest);
         int_event = interrupt_detected_events.get(event_key);
+
+        // Mark event as triggered first to handle race condition
+        if (event_manager != null) begin
+            event_manager.mark_event_triggered(event_key);
+        end
+
+        // Then trigger the event
         int_event.trigger();
 
         `uvm_info(get_type_name(), $sformatf("✅ INTERRUPT DETECTED: '%s' -> '%s' (event: %s)",
