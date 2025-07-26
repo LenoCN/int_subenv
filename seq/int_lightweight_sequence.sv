@@ -117,8 +117,9 @@ class int_lightweight_sequence extends int_base_sequence;
                  info.name, info.rtl_path_src), UVM_HIGH)
 
         // Register expectations with the scoreboard BEFORE sending stimulus
-        `uvm_info(get_type_name(), $sformatf("Registering expected interrupt: %s", info.name), UVM_HIGH)
-        add_expected(info);
+        // Use mask-aware expectation registration
+        `uvm_info(get_type_name(), $sformatf("Registering expected interrupt with mask consideration: %s", info.name), UVM_HIGH)
+        add_expected_with_mask(info);
 
         // Create and send stimulus item to driver
         `uvm_info(get_type_name(), $sformatf("Creating ASSERT stimulus for interrupt: %s", info.name), UVM_HIGH)
@@ -131,6 +132,9 @@ class int_lightweight_sequence extends int_base_sequence;
         `uvm_info(get_type_name(), $sformatf("Waiting for detection of interrupt: %s", info.name), UVM_HIGH)
         // Wait for interrupt to be detected by monitor using proper UVM approach
         wait_for_interrupt_detection(info);
+
+        // Update status register to reflect interrupt occurrence
+        int_routing_model::update_interrupt_status(info.name, 1);
 
         // Send clear command to driver (simulates software clearing)
         `uvm_info(get_type_name(), $sformatf("Creating CLEAR stimulus for interrupt: %s", info.name), UVM_HIGH)
@@ -205,10 +209,10 @@ class int_lightweight_sequence extends int_base_sequence;
         `uvm_info(get_type_name(), $sformatf("RTL source path for merge source %s: %s",
                  source_info.name, source_info.rtl_path_src), UVM_HIGH)
 
-        // Register expectation for the merge interrupt (not the source)
-        `uvm_info(get_type_name(), $sformatf("Registering expected merge interrupt: %s (from source: %s)",
+        // Register expectation for the merge interrupt (not the source) with mask consideration
+        `uvm_info(get_type_name(), $sformatf("Registering expected merge interrupt with mask: %s (from source: %s)",
                  merge_info.name, source_info.name), UVM_HIGH)
-        add_expected(merge_info);
+        add_expected_with_mask(merge_info);
 
         // Send stimulus for source interrupt
         `uvm_info(get_type_name(), $sformatf("Creating ASSERT stimulus for source interrupt: %s", source_info.name), UVM_HIGH)
@@ -224,6 +228,9 @@ class int_lightweight_sequence extends int_base_sequence;
         // Wait for merge interrupt to be detected
         `uvm_info(get_type_name(), $sformatf("Waiting for detection of merge interrupt: %s", merge_info.name), UVM_HIGH)
         wait_for_interrupt_detection(merge_info);
+
+        // Update status register to reflect merge interrupt occurrence
+        int_routing_model::update_interrupt_status(merge_info.name, 1);
 
         // Clear the source interrupt
         `uvm_info(get_type_name(), $sformatf("Creating CLEAR stimulus for source interrupt: %s", source_info.name), UVM_HIGH)
@@ -270,10 +277,10 @@ class int_lightweight_sequence extends int_base_sequence;
             return;
         end
 
-        // Register expectation for the merge interrupt
-        `uvm_info(get_type_name(), $sformatf("Registering expected merge interrupt: %s for multi-source test",
+        // Register expectation for the merge interrupt with mask consideration
+        `uvm_info(get_type_name(), $sformatf("Registering expected merge interrupt with mask: %s for multi-source test",
                  merge_info.name), UVM_HIGH)
-        add_expected(merge_info);
+        add_expected_with_mask(merge_info);
 
         // Assert all valid source interrupts simultaneously
         `uvm_info(get_type_name(), $sformatf("Asserting %0d source interrupts simultaneously", valid_sources), UVM_MEDIUM)
@@ -297,6 +304,9 @@ class int_lightweight_sequence extends int_base_sequence;
         `uvm_info(get_type_name(), $sformatf("Waiting for detection of merge interrupt: %s from multiple sources",
                  merge_info.name), UVM_HIGH)
         wait_for_interrupt_detection(merge_info);
+
+        // Update status register to reflect merge interrupt occurrence
+        int_routing_model::update_interrupt_status(merge_info.name, 1);
 
         // Clear all source interrupts
         `uvm_info(get_type_name(), "Clearing all source interrupts", UVM_MEDIUM)

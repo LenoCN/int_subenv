@@ -29,8 +29,19 @@ class int_tc_base extends soc_tc_base;
 
     task pre_reset_phase(uvm_phase phase);
         phase.raise_objection(this);
+
+        // Initialize interrupt register model
+        `uvm_info(get_type_name(), "Initializing interrupt register model...", UVM_MEDIUM)
+        int_register_model::init_registers();
+
+        `uvm_info(get_type_name(), "Randomizing interrupt mask registers...", UVM_MEDIUM)
+        int_register_model::randomize_mask_registers();
+
+        // Print the randomized configuration
+        int_register_model::print_register_config();
+
         phase.drop_objection(this);
-    endtask    
+    endtask
 
     task post_reset_phase(uvm_phase phase);
         phase.raise_objection(this);
@@ -42,6 +53,52 @@ class int_tc_base extends soc_tc_base;
     endtask : main_phase
 
     task post_shutdown_phase(uvm_phase phase);
+        phase.raise_objection(this);
+
+        // Check interrupt status registers at test completion
+        `uvm_info(get_type_name(), "Checking interrupt status registers at test completion...", UVM_MEDIUM)
+        check_interrupt_status_registers();
+
+        phase.drop_objection(this);
+    endtask
+
+    // Check interrupt status registers
+    virtual task check_interrupt_status_registers();
+        logic [31:0] status_value;
+        int status_errors = 0;
+
+        `uvm_info(get_type_name(), "=== Interrupt Status Register Check ===", UVM_MEDIUM)
+
+        // Check PLL interrupt status registers
+        for (int i = 0; i < 5; i++) begin
+            int_register_model::read_register(int_register_model::ADDR_STATUS_PLL_INTR_0 + (i * 4), status_value);
+            `uvm_info(get_type_name(), $sformatf("PLL status[%0d]: 0x%08x", i, status_value), UVM_HIGH)
+        end
+
+        // Check IOSUB normal interrupt status registers
+        int_register_model::read_register(int_register_model::ADDR_STATUS_IOSUB_NORMAL_INTR_0, status_value);
+        `uvm_info(get_type_name(), $sformatf("IOSUB normal status[0]: 0x%08x", status_value), UVM_HIGH)
+
+        int_register_model::read_register(int_register_model::ADDR_STATUS_IOSUB_NORMAL_INTR_1, status_value);
+        `uvm_info(get_type_name(), $sformatf("IOSUB normal status[1]: 0x%08x", status_value), UVM_HIGH)
+
+        // Check PSUB and PCIE1 status registers
+        int_register_model::read_register(int_register_model::ADDR_STATUS_PSUB_TO_IOSUB_INTR, status_value);
+        `uvm_info(get_type_name(), $sformatf("PSUB status: 0x%08x", status_value), UVM_HIGH)
+
+        int_register_model::read_register(int_register_model::ADDR_STATUS_PCIE1_TO_IOSUB_INTR, status_value);
+        `uvm_info(get_type_name(), $sformatf("PCIE1 status: 0x%08x", status_value), UVM_HIGH)
+
+        // Print summary of all status registers
+        int_register_model::print_status_registers();
+
+        if (status_errors == 0) begin
+            `uvm_info(get_type_name(), "✅ Status register check completed", UVM_MEDIUM)
+        end else begin
+            `uvm_error(get_type_name(), $sformatf("❌ Status register check found %0d errors", status_errors))
+        end
+
+        `uvm_info(get_type_name(), "=== End Status Register Check ===", UVM_MEDIUM)
     endtask
 endclass
 
