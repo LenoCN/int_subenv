@@ -283,6 +283,112 @@ class int_routing_model;
         return result;
     endfunction
 
+    // Function to predict if an interrupt will be routed considering mask registers
+    static function bit predict_interrupt_routing_with_mask(string interrupt_name, string destination);
+        interrupt_info_s info;
+        bit routing_enabled = 0;
+        bit mask_enabled = 1;
+
+        // First check if interrupt exists and has routing to destination
+        foreach (interrupt_map[i]) begin
+            if (interrupt_map[i].name == interrupt_name) begin
+                info = interrupt_map[i];
+                break;
+            end
+        end
+
+        // Check if routing is enabled for this destination
+        case (destination.toupper())
+            "AP": routing_enabled = info.to_ap;
+            "SCP": routing_enabled = info.to_scp;
+            "MCP": routing_enabled = info.to_mcp;
+            "IMU": routing_enabled = info.to_imu;
+            "IO": routing_enabled = info.to_io;
+            "OTHER_DIE": routing_enabled = info.to_other_die;
+            default: routing_enabled = 0;
+        endcase
+
+        // If routing is not enabled, interrupt won't be routed regardless of mask
+        if (!routing_enabled) return 0;
+
+        // Check if interrupt is masked (returns 1 if masked, 0 if enabled)
+        mask_enabled = !int_register_model::is_interrupt_masked(interrupt_name, destination);
+
+        // Interrupt will be routed if both routing is enabled AND mask is enabled
+        return (routing_enabled && mask_enabled);
+    endfunction
+
+    // Function to get all expected destinations for an interrupt considering masks
+    static function void get_expected_destinations_with_mask(string interrupt_name, ref string destinations[$]);
+        string all_destinations[$] = {"AP", "SCP", "MCP", "IMU", "IO", "OTHER_DIE"};
+
+        destinations.delete();
+
+        foreach (all_destinations[i]) begin
+            if (predict_interrupt_routing_with_mask(interrupt_name, all_destinations[i])) begin
+                destinations.push_back(all_destinations[i]);
+            end
+        end
+    endfunction
+
+    // Function to check if any destination is expected for an interrupt
+    static function bit has_any_expected_destination_with_mask(string interrupt_name);
+        string destinations[$];
+        get_expected_destinations_with_mask(interrupt_name, destinations);
+        return (destinations.size() > 0);
+    endfunction
+
+    // Function to update status registers when interrupt occurs
+    static function void update_interrupt_status(string interrupt_name, bit status_value);
+        // Update the register model status
+        int_register_model::update_status_register(interrupt_name, status_value);
+
+        // Log the status update
+        `uvm_info("INT_ROUTING_MODEL", $sformatf("Updated status for interrupt '%s' to %b",
+                  interrupt_name, status_value), UVM_HIGH)
+    endfunction
+
+    // Function to print routing prediction with mask consideration
+    static function void print_routing_prediction_with_mask(string interrupt_name);
+        string destinations[$];
+        interrupt_info_s info;
+
+        // Get interrupt info
+        foreach (interrupt_map[i]) begin
+            if (interrupt_map[i].name == interrupt_name) begin
+                info = interrupt_map[i];
+                break;
+            end
+        end
+
+        `uvm_info("INT_ROUTING_MODEL", $sformatf("=== Routing Prediction for '%s' ===", interrupt_name), UVM_MEDIUM)
+        `uvm_info("INT_ROUTING_MODEL", $sformatf("Base routing: AP=%b, SCP=%b, MCP=%b, IMU=%b, IO=%b, OTHER_DIE=%b",
+                  info.to_ap, info.to_scp, info.to_mcp, info.to_imu, info.to_io, info.to_other_die), UVM_MEDIUM)
+
+        // Check each destination with mask consideration
+        string all_destinations[$] = {"AP", "SCP", "MCP", "IMU", "IO", "OTHER_DIE"};
+        foreach (all_destinations[i]) begin
+            bit routing_enabled = predict_interrupt_routing_with_mask(interrupt_name, all_destinations[i]);
+            bit mask_status = !int_register_model::is_interrupt_masked(interrupt_name, all_destinations[i]);
+            `uvm_info("INT_ROUTING_MODEL", $sformatf("  %s: routing=%b, mask_enabled=%b, final=%b",
+                      all_destinations[i],
+                      (all_destinations[i] == "AP") ? info.to_ap :
+                      (all_destinations[i] == "SCP") ? info.to_scp :
+                      (all_destinations[i] == "MCP") ? info.to_mcp :
+                      (all_destinations[i] == "IMU") ? info.to_imu :
+                      (all_destinations[i] == "IO") ? info.to_io : info.to_other_die,
+                      mask_status, routing_enabled), UVM_MEDIUM)
+        end
+
+        get_expected_destinations_with_mask(interrupt_name, destinations);
+        if (destinations.size() > 0) begin
+            `uvm_info("INT_ROUTING_MODEL", $sformatf("Expected destinations: %p", destinations), UVM_MEDIUM)
+        end else begin
+            `uvm_info("INT_ROUTING_MODEL", "No expected destinations (all masked or no routing)", UVM_MEDIUM)
+        end
+        `uvm_info("INT_ROUTING_MODEL", "=== End Routing Prediction ===", UVM_MEDIUM)
+    endfunction
+
 endclass
 
 `endif // INT_ROUTING_MODEL_SV
