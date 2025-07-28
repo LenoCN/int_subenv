@@ -312,7 +312,7 @@ class int_routing_model;
         if (!routing_enabled) return 0;
 
         // Check if interrupt is masked (returns 1 if masked, 0 if enabled)
-        mask_enabled = !int_register_model::is_interrupt_masked(interrupt_name, destination);
+        mask_enabled = !is_interrupt_masked(interrupt_name, destination);
 
         // Interrupt will be routed if both routing is enabled AND mask is enabled
         return (routing_enabled && mask_enabled);
@@ -341,7 +341,7 @@ class int_routing_model;
     // Function to update status registers when interrupt occurs
     static function void update_interrupt_status(string interrupt_name, bit status_value);
         // Update the register model status
-        int_register_model::update_status_register(interrupt_name, status_value);
+        update_status_register(interrupt_name, status_value);
 
         // Log the status update
         `uvm_info("INT_ROUTING_MODEL", $sformatf("Updated status for interrupt '%s' to %b",
@@ -369,7 +369,7 @@ class int_routing_model;
         string all_destinations[$] = {"AP", "SCP", "MCP", "IMU", "IO", "OTHER_DIE"};
         foreach (all_destinations[i]) begin
             bit routing_enabled = predict_interrupt_routing_with_mask(interrupt_name, all_destinations[i]);
-            bit mask_status = !int_register_model::is_interrupt_masked(interrupt_name, all_destinations[i]);
+            bit mask_status = !is_interrupt_masked(interrupt_name, all_destinations[i]);
             `uvm_info("INT_ROUTING_MODEL", $sformatf("  %s: routing=%b, mask_enabled=%b, final=%b",
                       all_destinations[i],
                       (all_destinations[i] == "AP") ? info.to_ap :
