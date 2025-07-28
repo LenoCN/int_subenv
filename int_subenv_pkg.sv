@@ -8,6 +8,7 @@ package int_subenv_pkg;
     `include "seq/int_def.sv"
     `include "seq/int_transaction.sv"
     `include "seq/int_stimulus_item.sv"
+    `include "seq/int_register_model.sv"
     `include "seq/int_routing_model.sv"
     `include "env/int_scoreboard.sv"
     `include "env/int_event_manager.sv"
