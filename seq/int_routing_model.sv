@@ -383,6 +383,7 @@ class int_routing_model extends uvm_object;
     function void print_routing_prediction_with_mask(string interrupt_name, int_register_model register_model);
         string destinations[$];
         interrupt_info_s info;
+        string all_destinations[$];
 
         // Get interrupt info
         foreach (interrupt_map[i]) begin
@@ -397,7 +398,7 @@ class int_routing_model extends uvm_object;
                   info.to_ap, info.to_scp, info.to_mcp, info.to_imu, info.to_io, info.to_other_die), UVM_MEDIUM)
 
         // Check each destination with mask consideration
-        string all_destinations[$] = {"AP", "SCP", "MCP", "IMU", "IO", "OTHER_DIE"};
+        all_destinations[$] = {"AP", "SCP", "MCP", "IMU", "IO", "OTHER_DIE"};
         foreach (all_destinations[i]) begin
             bit routing_enabled = predict_interrupt_routing_with_mask(interrupt_name, all_destinations[i], register_model);
             bit mask_status = !register_model.is_interrupt_masked(interrupt_name, all_destinations[i], this);
