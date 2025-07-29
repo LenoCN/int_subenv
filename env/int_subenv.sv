@@ -39,8 +39,11 @@ class int_subenv extends soc_base_subenv;
         uvm_config_db#(int_event_manager)::set(this, "m_monitor", "event_manager", m_event_manager);
 
         // Share model objects through configuration database
+        // Set both locally and globally for broader access
         uvm_config_db#(int_register_model)::set(this, "*", "register_model", m_register_model);
         uvm_config_db#(int_routing_model)::set(this, "*", "routing_model", m_routing_model);
+        uvm_config_db#(int_register_model)::set(null, "*", "register_model", m_register_model);
+        uvm_config_db#(int_routing_model)::set(null, "*", "routing_model", m_routing_model);
     endfunction
 
     function void connect_phase(uvm_phase phase);

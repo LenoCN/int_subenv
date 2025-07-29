@@ -27,10 +27,11 @@ class int_tc_base extends soc_tc_base;
         end
 
         // Get model object references from configuration database
-        if(!uvm_config_db#(int_register_model)::get(this,"","register_model",m_register_model)) begin
+        // Try to get from subenv hierarchy first, then fallback to global
+        if(!uvm_config_db#(int_register_model)::get(null,"*","register_model",m_register_model)) begin
             `uvm_fatal(get_type_name(), "Cannot get register_model from config DB");
         end
-        if(!uvm_config_db#(int_routing_model)::get(this,"","routing_model",m_routing_model)) begin
+        if(!uvm_config_db#(int_routing_model)::get(null,"*","routing_model",m_routing_model)) begin
             `uvm_fatal(get_type_name(), "Cannot get routing_model from config DB");
         end
 
