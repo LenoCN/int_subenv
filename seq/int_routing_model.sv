@@ -295,10 +295,13 @@ class int_routing_model extends uvm_object;
         bit routing_enabled = 0;
         bit mask_enabled = 1;
 
+        `uvm_info("INT_ROUTING_MODEL", $sformatf("🔮 Predicting routing for interrupt '%s' to destination '%s'", interrupt_name, destination), UVM_HIGH)
+
         // First check if interrupt exists and has routing to destination
         foreach (interrupt_map[i]) begin
             if (interrupt_map[i].name == interrupt_name) begin
                 info = interrupt_map[i];
+                `uvm_info("INT_ROUTING_MODEL", $sformatf("✅ Found interrupt '%s' in routing model", interrupt_name), UVM_HIGH)
                 break;
             end
         end
@@ -314,27 +317,48 @@ class int_routing_model extends uvm_object;
             default: routing_enabled = 0;
         endcase
 
+        `uvm_info("INT_ROUTING_MODEL", $sformatf("📊 Base routing check: interrupt '%s' to '%s' = %s",
+                  interrupt_name, destination, routing_enabled ? "ENABLED" : "DISABLED"), UVM_HIGH)
+
         // If routing is not enabled, interrupt won't be routed regardless of mask
-        if (!routing_enabled) return 0;
+        if (!routing_enabled) begin
+            `uvm_info("INT_ROUTING_MODEL", $sformatf("❌ Base routing disabled for '%s' to '%s', final result: NO ROUTING",
+                      interrupt_name, destination), UVM_HIGH)
+            return 0;
+        end
 
         // Check if interrupt is masked (returns 1 if masked, 0 if enabled)
         mask_enabled = !register_model.is_interrupt_masked(interrupt_name, destination, this);
+        `uvm_info("INT_ROUTING_MODEL", $sformatf("🎭 Mask check: interrupt '%s' to '%s' = %s",
+                  interrupt_name, destination, mask_enabled ? "ENABLED" : "MASKED"), UVM_HIGH)
 
         // Interrupt will be routed if both routing is enabled AND mask is enabled
-        return (routing_enabled && mask_enabled);
+        bit final_result = (routing_enabled && mask_enabled);
+        `uvm_info("INT_ROUTING_MODEL", $sformatf("🎯 Final routing prediction: interrupt '%s' to '%s' = %s (routing=%b, mask=%b)",
+                  interrupt_name, destination, final_result ? "WILL ROUTE" : "NO ROUTING", routing_enabled, mask_enabled), UVM_MEDIUM)
+        return final_result;
     endfunction
 
     // Function to get all expected destinations for an interrupt considering masks
     function void get_expected_destinations_with_mask(string interrupt_name, ref string destinations[$], int_register_model register_model);
         string all_destinations[$] = {"AP", "SCP", "MCP", "IMU", "IO", "OTHER_DIE"};
 
+        `uvm_info("INT_ROUTING_MODEL", $sformatf("🎯 Getting expected destinations with mask for interrupt: %s", interrupt_name), UVM_HIGH)
+
         destinations.delete();
 
         foreach (all_destinations[i]) begin
+            `uvm_info("INT_ROUTING_MODEL", $sformatf("🔍 Checking destination %0d/%0d: %s", i+1, all_destinations.size(), all_destinations[i]), UVM_HIGH)
             if (predict_interrupt_routing_with_mask(interrupt_name, all_destinations[i], register_model)) begin
                 destinations.push_back(all_destinations[i]);
+                `uvm_info("INT_ROUTING_MODEL", $sformatf("✅ Added destination: %s", all_destinations[i]), UVM_HIGH)
+            end else begin
+                `uvm_info("INT_ROUTING_MODEL", $sformatf("❌ Skipped destination: %s", all_destinations[i]), UVM_HIGH)
             end
         end
+
+        `uvm_info("INT_ROUTING_MODEL", $sformatf("📋 Final expected destinations for '%s': %p (count: %0d)",
+                  interrupt_name, destinations, destinations.size()), UVM_MEDIUM)
     endfunction
 
     // Function to check if any destination is expected for an interrupt
