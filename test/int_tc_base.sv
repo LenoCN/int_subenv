@@ -26,13 +26,13 @@ class int_tc_base extends soc_tc_base;
             `uvm_fatal(get_type_name(), $sformatf("can not get int interface"));
         end
 
-        // Get model object references from configuration database
-        if(!uvm_config_db#(int_register_model)::get(this,"","register_model",m_register_model)) begin
-            `uvm_fatal(get_type_name(), "Cannot get register_model from config DB");
-        end
-        if(!uvm_config_db#(int_routing_model)::get(this,"","routing_model",m_routing_model)) begin
-            `uvm_fatal(get_type_name(), "Cannot get routing_model from config DB");
-        end
+        // Create model objects at test case level (top level)
+        m_register_model = int_register_model::type_id::create("m_register_model");
+        m_routing_model = int_routing_model::type_id::create("m_routing_model");
+
+        // Set model objects in configuration database for sub-components
+        uvm_config_db#(int_register_model)::set(this, "*", "register_model", m_register_model);
+        uvm_config_db#(int_routing_model)::set(this, "*", "routing_model", m_routing_model);
 
         uvm_top.set_timeout(13_000_000, 0); //ns
     endfunction

@@ -38,9 +38,9 @@ class enhanced_stimulus_sequence extends int_base_sequence;
 
     virtual task body();
         // Build the interrupt model database
-        int_routing_model::build();
+        m_routing_model.build();
 
-        if (int_routing_model::interrupt_map.size() == 0) begin
+        if (m_routing_model.interrupt_map.size() == 0) begin
             `uvm_warning(get_type_name(), "Interrupt map is empty. No tests will be performed.")
             return;
         end
@@ -63,10 +63,10 @@ class enhanced_stimulus_sequence extends int_base_sequence;
         `uvm_info(get_type_name(), "Testing Level-triggered interrupts", UVM_MEDIUM)
 
         // Find all level-triggered interrupts
-        foreach (int_routing_model::interrupt_map[i]) begin
-            if (int_routing_model::interrupt_map[i].trigger == LEVEL) begin
+        foreach (m_routing_model.interrupt_map[i]) begin
+            if (m_routing_model.interrupt_map[i].trigger == LEVEL) begin
                 level_interrupts = new[count + 1](level_interrupts);
-                level_interrupts[count] = int_routing_model::interrupt_map[i];
+                level_interrupts[count] = m_routing_model.interrupt_map[i];
                 count++;
             end
         end
@@ -87,10 +87,10 @@ class enhanced_stimulus_sequence extends int_base_sequence;
         `uvm_info(get_type_name(), "Testing Edge-triggered interrupts", UVM_MEDIUM)
 
         // Find all edge-triggered interrupts
-        foreach (int_routing_model::interrupt_map[i]) begin
-            if (int_routing_model::interrupt_map[i].trigger == EDGE) begin
+        foreach (m_routing_model.interrupt_map[i]) begin
+            if (m_routing_model.interrupt_map[i].trigger == EDGE) begin
                 edge_interrupts = new[count + 1](edge_interrupts);
-                edge_interrupts[count] = int_routing_model::interrupt_map[i];
+                edge_interrupts[count] = m_routing_model.interrupt_map[i];
                 count++;
             end
         end
@@ -111,10 +111,10 @@ class enhanced_stimulus_sequence extends int_base_sequence;
         `uvm_info(get_type_name(), "Testing Pulse-triggered interrupts", UVM_MEDIUM)
 
         // Find all pulse-triggered interrupts
-        foreach (int_routing_model::interrupt_map[i]) begin
-            if (int_routing_model::interrupt_map[i].trigger == PULSE) begin
+        foreach (m_routing_model.interrupt_map[i]) begin
+            if (m_routing_model.interrupt_map[i].trigger == PULSE) begin
                 pulse_interrupts = new[count + 1](pulse_interrupts);
-                pulse_interrupts[count] = int_routing_model::interrupt_map[i];
+                pulse_interrupts[count] = m_routing_model.interrupt_map[i];
                 count++;
             end
         end

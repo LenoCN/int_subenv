@@ -29,15 +29,15 @@ class int_base_sequence extends uvm_sequence;
             `uvm_info(get_type_name(), "Successfully retrieved event_manager from config DB", UVM_HIGH)
         end
 
-        // Get model objects from config DB
+        // Get model objects from config DB (set by test case)
         if (!uvm_config_db#(int_register_model)::get(m_sequencer, "", "register_model", m_register_model)) begin
-            `uvm_error(get_type_name(), "Failed to get register_model from config DB")
+            `uvm_fatal(get_type_name(), "Failed to get register_model from config DB - should be set by test case")
         end else begin
             `uvm_info(get_type_name(), "Successfully retrieved register_model from config DB", UVM_HIGH)
         end
 
         if (!uvm_config_db#(int_routing_model)::get(m_sequencer, "", "routing_model", m_routing_model)) begin
-            `uvm_error(get_type_name(), "Failed to get routing_model from config DB")
+            `uvm_fatal(get_type_name(), "Failed to get routing_model from config DB - should be set by test case")
         end else begin
             `uvm_info(get_type_name(), "Successfully retrieved routing_model from config DB", UVM_HIGH)
         end

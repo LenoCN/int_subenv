@@ -500,8 +500,8 @@ class int_register_model extends uvm_object;
                         end
                     end
                     "ACCEL": begin
-                        if (routing_model.interrupt_map[i].to_accel == 1) begin
-                            return routing_model.interrupt_map[i].dest_index_accel;
+                        if (routing_model.interrupt_map[i].to_imu == 1) begin
+                            return routing_model.interrupt_map[i].dest_index_imu;
                         end
                     end
                     "AP": begin
