@@ -11,7 +11,7 @@ class int_subenv extends soc_base_subenv;
     int_driver    m_driver;
     int_coverage  m_coverage;
 
-    // Model objects (now instantiated instead of static)
+    // Model object references (created by test case)
     int_register_model m_register_model;
     int_routing_model  m_routing_model;
 
@@ -28,9 +28,13 @@ class int_subenv extends soc_base_subenv;
         m_event_manager = int_event_manager::type_id::create("m_event_manager");
         m_coverage = int_coverage::type_id::create("m_coverage", this);
 
-        // Create model objects (now instantiated instead of static)
-        m_register_model = int_register_model::type_id::create("m_register_model");
-        m_routing_model = int_routing_model::type_id::create("m_routing_model");
+        // Get model object references from configuration database (set by test case)
+        if(!uvm_config_db#(int_register_model)::get(this, "", "register_model", m_register_model)) begin
+            `uvm_fatal(get_type_name(), "Cannot get register_model from config DB - should be set by test case");
+        end
+        if(!uvm_config_db#(int_routing_model)::get(this, "", "routing_model", m_routing_model)) begin
+            `uvm_fatal(get_type_name(), "Cannot get routing_model from config DB - should be set by test case");
+        end
 
         // Share the event pool through configuration database
         uvm_config_db#(uvm_event_pool)::set(this, "m_monitor", "interrupt_event_pool", m_event_manager.get_event_pool());
@@ -38,12 +42,9 @@ class int_subenv extends soc_base_subenv;
         // Also set event_manager specifically for monitor to handle race conditions
         uvm_config_db#(int_event_manager)::set(this, "m_monitor", "event_manager", m_event_manager);
 
-        // Share model objects through configuration database
-        // Set both locally and globally for broader access
+        // Share model objects to sub-components
         uvm_config_db#(int_register_model)::set(this, "*", "register_model", m_register_model);
         uvm_config_db#(int_routing_model)::set(this, "*", "routing_model", m_routing_model);
-        uvm_config_db#(int_register_model)::set(null, "*", "register_model", m_register_model);
-        uvm_config_db#(int_routing_model)::set(null, "*", "routing_model", m_routing_model);
     endfunction
 
     function void connect_phase(uvm_phase phase);
