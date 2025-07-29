@@ -224,6 +224,7 @@ class int_register_model extends uvm_object;
         int sub_index;
         int reg_bit;
         int mask_bit;
+        bit final_result;
 
         `uvm_info("INT_REG_MODEL", $sformatf("🔍 Checking mask status for interrupt '%s' to destination '%s'",
                   interrupt_name, destination), UVM_HIGH)
@@ -443,7 +444,7 @@ class int_register_model extends uvm_object;
         end
 
         // Return 1 if masked (bit is 0), 0 if enabled (bit is 1)
-        bit final_result = ~mask_value[bit_index];
+        final_result = ~mask_value[bit_index];
         `uvm_info("INT_REG_MODEL", $sformatf("🔍 Final mask check result: interrupt='%s', dest='%s', addr=0x%08x, bit_index=%0d, mask_bit=%b, result=%s",
                   interrupt_name, destination, addr, bit_index, mask_value[bit_index], final_result ? "MASKED" : "ENABLED"), UVM_MEDIUM)
         return final_result;
