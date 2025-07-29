@@ -223,6 +223,7 @@ class int_register_model extends uvm_object;
         int dest_index;
         int sub_index;
         int reg_bit;
+        int mask_bit;
 
         `uvm_info("INT_REG_MODEL", $sformatf("🔍 Checking mask status for interrupt '%s' to destination '%s'",
                   interrupt_name, destination), UVM_HIGH)
@@ -326,7 +327,6 @@ class int_register_model extends uvm_object;
                     // SCP: dest_index_scp maps to cpu_irq[109-239]
                     // mask bit 0-130 corresponds to cpu_irq[109-239]
                     // So mask_bit = dest_index_scp - 109
-                    int mask_bit;
                     if (dest_index < 109 || dest_index > 239) begin
                         `uvm_info("INT_REG_MODEL", $sformatf("❌ dest_index (%0d) out of valid SCP cpu_irq range [109-239], assuming masked", dest_index), UVM_MEDIUM)
                         return 1; // Out of valid cpu_irq range, assume masked
