@@ -3,7 +3,8 @@
 
 // Hardware register model for interrupt mask and status registers
 // Uses reg_seq for actual hardware access like tc_int_sanity.sv
-class int_register_model;
+class int_register_model extends uvm_object;
+    `uvm_object_utils(int_register_model)
 
     // Register address definitions
     typedef enum logic [31:0] {
@@ -66,12 +67,17 @@ class int_register_model;
         ADDR_HW_LOCK_NONSEC     = 32'h0001_D000
     } register_addr_e;
 
-    // Static variables to store register base address and current mask values
-    static bit[63:0] interrupt_reg_base;
-    static logic [31:0] current_mask_values[logic [31:0]];  // Cache for mask values
+    // Instance variables to store register base address and current mask values
+    bit[63:0] interrupt_reg_base;
+    logic [31:0] current_mask_values[logic [31:0]];  // Cache for mask values
+
+    // Constructor
+    function new(string name = "int_register_model");
+        super.new(name);
+    endfunction
 
     // Initialize register base address using memory_map (like tc_int_sanity.sv)
-    static task init_registers();
+    task init_registers();
         // Get interrupt register base address from memory map
         // This follows the same pattern as tc_int_sanity.sv
         interrupt_reg_base = memory_map.get_start_addr("interrupt_csr", soc_vargs::main_core);
@@ -83,7 +89,7 @@ class int_register_model;
         `uvm_info("INT_REG_MODEL", "Hardware register model initialized", UVM_MEDIUM)
     endtask
     // Write to hardware register using reg_seq (like tc_int_sanity.sv)
-    static task write_register(logic [31:0] addr, logic [31:0] data);
+    task write_register(logic [31:0] addr, logic [31:0] data);
         logic [63:0] full_addr;
         full_addr = interrupt_reg_base + addr;
 
@@ -98,7 +104,7 @@ class int_register_model;
     endtask
 
     // Read from hardware register using reg_seq (like tc_int_sanity.sv)
-    static task read_register(logic [31:0] addr, output logic [31:0] data);
+    task read_register(logic [31:0] addr, output logic [31:0] data);
         logic [63:0] full_addr;
         full_addr = interrupt_reg_base + addr;
 
@@ -110,7 +116,7 @@ class int_register_model;
     endtask
 
     // Randomize mask registers for test initialization
-    static task randomize_mask_registers();
+    task randomize_mask_registers();
         logic [31:0] random_value;
 
         `uvm_info("INT_REG_MODEL", "Randomizing interrupt mask registers...", UVM_MEDIUM)
@@ -201,7 +207,7 @@ class int_register_model;
     // Update status register (called when interrupt occurs)
     // Note: Status registers are typically read-only and updated by hardware
     // This function is kept for compatibility but may not be needed for hardware model
-    static function void update_status_register(string interrupt_name, bit status_value);
+    function void update_status_register(string interrupt_name, bit status_value);
         `uvm_info("INT_REG_MODEL", $sformatf("Status update for interrupt '%s': %b (Note: Status registers are typically hardware-updated)",
                   interrupt_name, status_value), UVM_HIGH)
         // In hardware model, status registers are updated by the DUT, not by software
@@ -209,7 +215,7 @@ class int_register_model;
     endfunction
 
     // Check if interrupt is masked (returns 1 if masked/disabled, 0 if enabled)
-    static function bit is_interrupt_masked(string interrupt_name, string destination);
+    function bit is_interrupt_masked(string interrupt_name, string destination, int_routing_model routing_model);
         logic [31:0] mask_value;
         logic [31:0] addr;
         int bit_index;
@@ -226,7 +232,7 @@ class int_register_model;
              interrupt_name != "iosub_slv_err_intr")) begin
 
             // Get interrupt sub_index for IOSUB normal interrupts
-            sub_index = get_interrupt_sub_index(interrupt_name);
+            sub_index = get_interrupt_sub_index(interrupt_name, routing_model);
             if (sub_index < 0) return 0;
 
             case (destination.toupper())
@@ -276,7 +282,7 @@ class int_register_model;
         else begin
             // For all other interrupts (including IOSUB general interrupts, SCP, MCP groups)
             // Use dest_index_scp/dest_index_mcp which corresponds to cpu_irq signal index
-            dest_index = get_interrupt_dest_index(interrupt_name, destination);
+            dest_index = get_interrupt_dest_index(interrupt_name, destination, routing_model);
             if (dest_index < 0) begin
                 // Unknown interrupt or destination not supported, assume not masked
                 return 0;
@@ -389,7 +395,7 @@ class int_register_model;
     endfunction
 
     // Print current register configuration
-    static task print_register_config();
+    task print_register_config();
         logic [31:0] data;
 
         `uvm_info("INT_REG_MODEL", "=== Current Hardware Register Configuration ===", UVM_MEDIUM)
@@ -428,7 +434,7 @@ class int_register_model;
     endtask
 
     // Print current status registers
-    static task print_status_registers();
+    task print_status_registers();
         logic [31:0] data;
 
         `uvm_info("INT_REG_MODEL", "=== Current Hardware Status Registers ===", UVM_MEDIUM)
@@ -467,50 +473,50 @@ class int_register_model;
     endtask
 
     // Get interrupt sub_index from interrupt map (for IOSUB normal interrupts)
-    static function int get_interrupt_sub_index(string interrupt_name);
+    function int get_interrupt_sub_index(string interrupt_name, int_routing_model routing_model);
         // Search through interrupt map to find the sub_index for this interrupt
-        foreach (interrupt_map[i]) begin
-            if (interrupt_map[i].name == interrupt_name) begin
-                return interrupt_map[i].index;
+        foreach (routing_model.interrupt_map[i]) begin
+            if (routing_model.interrupt_map[i].name == interrupt_name) begin
+                return routing_model.interrupt_map[i].index;
             end
         end
         return -1; // Not found
     endfunction
 
     // Get interrupt destination index from interrupt map (for SCP/MCP general interrupts)
-    static function int get_interrupt_dest_index(string interrupt_name, string destination);
+    function int get_interrupt_dest_index(string interrupt_name, string destination, int_routing_model routing_model);
         // Search through interrupt map to find the dest_index for this interrupt and destination
-        foreach (interrupt_map[i]) begin
-            if (interrupt_map[i].name == interrupt_name) begin
+        foreach (routing_model.interrupt_map[i]) begin
+            if (routing_model.interrupt_map[i].name == interrupt_name) begin
                 case (destination.toupper())
                     "SCP": begin
-                        if (interrupt_map[i].to_scp == 1) begin
-                            return interrupt_map[i].dest_index_scp;
+                        if (routing_model.interrupt_map[i].to_scp == 1) begin
+                            return routing_model.interrupt_map[i].dest_index_scp;
                         end
                     end
                     "MCP": begin
-                        if (interrupt_map[i].to_mcp == 1) begin
-                            return interrupt_map[i].dest_index_mcp;
+                        if (routing_model.interrupt_map[i].to_mcp == 1) begin
+                            return routing_model.interrupt_map[i].dest_index_mcp;
                         end
                     end
                     "ACCEL": begin
-                        if (interrupt_map[i].to_accel == 1) begin
-                            return interrupt_map[i].dest_index_accel;
+                        if (routing_model.interrupt_map[i].to_accel == 1) begin
+                            return routing_model.interrupt_map[i].dest_index_accel;
                         end
                     end
                     "AP": begin
-                        if (interrupt_map[i].to_ap == 1) begin
-                            return interrupt_map[i].dest_index_ap;
+                        if (routing_model.interrupt_map[i].to_ap == 1) begin
+                            return routing_model.interrupt_map[i].dest_index_ap;
                         end
                     end
                     "IMU": begin
-                        if (interrupt_map[i].to_imu == 1) begin
-                            return interrupt_map[i].dest_index_imu;
+                        if (routing_model.interrupt_map[i].to_imu == 1) begin
+                            return routing_model.interrupt_map[i].dest_index_imu;
                         end
                     end
                     "IO": begin
-                        if (interrupt_map[i].to_io == 1) begin
-                            return interrupt_map[i].dest_index_io;
+                        if (routing_model.interrupt_map[i].to_io == 1) begin
+                            return routing_model.interrupt_map[i].dest_index_io;
                         end
                     end
                 endcase
