@@ -15,6 +15,10 @@ class int_monitor extends uvm_monitor;
     // Event manager for race condition handling
     int_event_manager event_manager;
 
+    // Model object references
+    int_register_model m_register_model;
+    int_routing_model  m_routing_model;
+
     // Timing configuration
     timing_config timing_cfg;
 
@@ -40,13 +44,21 @@ class int_monitor extends uvm_monitor;
             `uvm_warning(get_type_name(), "No event_manager found in config DB, race condition handling disabled")
         end
 
+        // Get model objects from configuration database
+        if(!uvm_config_db#(int_register_model)::get(this, "", "register_model", m_register_model)) begin
+            `uvm_fatal(get_type_name(), "Cannot get register_model from config DB");
+        end
+        if(!uvm_config_db#(int_routing_model)::get(this, "", "routing_model", m_routing_model)) begin
+            `uvm_fatal(get_type_name(), "Cannot get routing_model from config DB");
+        end
+
         // Initialize timing configuration
         init_timing_config();
         timing_cfg = global_timing_config;
     endfunction
 
     virtual task run_phase(uvm_phase phase);
-        int_routing_model::build();
+        m_routing_model.build();
 
         // Debug: Show interrupt configuration summary
         debug_interrupt_configuration();
@@ -54,10 +66,10 @@ class int_monitor extends uvm_monitor;
         // Create a fork for each interrupt to be monitored in parallel.
         // This provides better isolation and scalability than monitoring entire buses.
         fork
-            foreach (int_routing_model::interrupt_map[i]) begin
+            foreach (m_routing_model.interrupt_map[i]) begin
                 automatic int j = i;
                 fork
-                    monitor_interrupt(int_routing_model::interrupt_map[j]);
+                    monitor_interrupt(m_routing_model.interrupt_map[j]);
                 join_none
             end
         join
@@ -288,14 +300,14 @@ class int_monitor extends uvm_monitor;
     // Debug function to show interrupt configuration summary at startup
     function void debug_interrupt_configuration();
         int group_counts[string];
-        int total_interrupts = int_routing_model::interrupt_map.size();
+        int total_interrupts = m_routing_model.interrupt_map.size();
 
         `uvm_info(get_type_name(), "🔍 === INTERRUPT CONFIGURATION SUMMARY ===", UVM_MEDIUM)
         `uvm_info(get_type_name(), $sformatf("Total interrupts in map: %0d", total_interrupts), UVM_MEDIUM)
 
         // Count interrupts by group
-        foreach (int_routing_model::interrupt_map[i]) begin
-            string group_name = int_routing_model::interrupt_map[i].group.name();
+        foreach (m_routing_model.interrupt_map[i]) begin
+            string group_name = m_routing_model.interrupt_map[i].group.name();
             if (group_counts.exists(group_name)) begin
                 group_counts[group_name]++;
             end else begin

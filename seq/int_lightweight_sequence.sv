@@ -57,23 +57,23 @@ class int_lightweight_sequence extends int_base_sequence;
         
         // Build the interrupt model database
         `uvm_info(get_type_name(), "Building interrupt routing model database", UVM_HIGH)
-        int_routing_model::build();
+        m_routing_model.build();
 
-        if (int_routing_model::interrupt_map.size() == 0) begin
+        if (m_routing_model.interrupt_map.size() == 0) begin
             `uvm_warning(get_type_name(), "Interrupt map is empty. No checks will be performed.")
             return;
         end
 
         `uvm_info(get_type_name(), $sformatf("Starting lightweight interrupt routing check for %0d interrupts",
-                  int_routing_model::interrupt_map.size()), UVM_LOW)
+                  m_routing_model.interrupt_map.size()), UVM_LOW)
 
         // Iterate over all interrupts in the model and check their routing
         `uvm_info(get_type_name(), "Beginning iteration through all interrupts in the model", UVM_DEBUG)
-        foreach (int_routing_model::interrupt_map[i]) begin
+        foreach (m_routing_model.interrupt_map[i]) begin
             `uvm_info(get_type_name(), $sformatf("Processing interrupt %0d of %0d: %s",
-                     i+1, int_routing_model::interrupt_map.size(),
-                     int_routing_model::interrupt_map[i].name), UVM_DEBUG)
-            check_interrupt_routing(int_routing_model::interrupt_map[i]);
+                     i+1, m_routing_model.interrupt_map.size(),
+                     m_routing_model.interrupt_map[i].name), UVM_DEBUG)
+            check_interrupt_routing(m_routing_model.interrupt_map[i]);
         end
 
         `uvm_info(get_type_name(), "Lightweight interrupt routing check completed successfully", UVM_LOW)
@@ -85,7 +85,7 @@ class int_lightweight_sequence extends int_base_sequence;
                   info.name, info.group.name(), info.index, info.trigger.name(), info.polarity.name()), UVM_MEDIUM)
 
         // Check if this is a merge interrupt
-        if (int_routing_model::is_merge_interrupt(info.name)) begin
+        if (m_routing_model.is_merge_interrupt(info.name)) begin
             `uvm_info(get_type_name(), $sformatf("Interrupt %s identified as a merge interrupt", info.name), UVM_HIGH)
             check_merge_interrupt_routing(info);
         end else begin
@@ -134,7 +134,7 @@ class int_lightweight_sequence extends int_base_sequence;
         wait_for_interrupt_detection(info);
 
         // Update status register to reflect interrupt occurrence
-        int_routing_model::update_interrupt_status(info.name, 1);
+        m_routing_model.update_interrupt_status(info.name, 1, m_register_model);
 
         // Send clear command to driver (simulates software clearing)
         `uvm_info(get_type_name(), $sformatf("Creating CLEAR stimulus for interrupt: %s", info.name), UVM_HIGH)
@@ -160,7 +160,7 @@ class int_lightweight_sequence extends int_base_sequence;
         // Get all source interrupts that should be merged into this interrupt
         `uvm_info(get_type_name(), $sformatf("Retrieving source interrupts for merge interrupt: %s",
                  merge_info.name), UVM_HIGH)
-        num_sources = int_routing_model::get_merge_sources(merge_info.name, source_interrupts);
+        num_sources = m_routing_model.get_merge_sources(merge_info.name, source_interrupts);
 
         if (num_sources == 0) begin
             `uvm_warning(get_type_name(), $sformatf("No source interrupts found for merge interrupt '%s'", merge_info.name));
@@ -230,7 +230,7 @@ class int_lightweight_sequence extends int_base_sequence;
         wait_for_interrupt_detection(merge_info);
 
         // Update status register to reflect merge interrupt occurrence
-        int_routing_model::update_interrupt_status(merge_info.name, 1);
+        m_routing_model.update_interrupt_status(merge_info.name, 1, m_register_model);
 
         // Clear the source interrupt
         `uvm_info(get_type_name(), $sformatf("Creating CLEAR stimulus for source interrupt: %s", source_info.name), UVM_HIGH)
@@ -306,7 +306,7 @@ class int_lightweight_sequence extends int_base_sequence;
         wait_for_interrupt_detection(merge_info);
 
         // Update status register to reflect merge interrupt occurrence
-        int_routing_model::update_interrupt_status(merge_info.name, 1);
+        m_routing_model.update_interrupt_status(merge_info.name, 1, m_register_model);
 
         // Clear all source interrupts
         `uvm_info(get_type_name(), "Clearing all source interrupts", UVM_MEDIUM)

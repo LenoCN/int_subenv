@@ -7,6 +7,10 @@ class int_base_sequence extends uvm_sequence;
     // Event manager for interrupt detection handshake
     int_event_manager event_manager;
 
+    // Model object references
+    int_register_model m_register_model;
+    int_routing_model  m_routing_model;
+
     function new(string name = "int_base_sequence");
         super.new(name);
     endfunction
@@ -23,6 +27,19 @@ class int_base_sequence extends uvm_sequence;
             `uvm_error(get_type_name(), "Failed to get event_manager from config DB")
         end else begin
             `uvm_info(get_type_name(), "Successfully retrieved event_manager from config DB", UVM_HIGH)
+        end
+
+        // Get model objects from config DB
+        if (!uvm_config_db#(int_register_model)::get(m_sequencer, "", "register_model", m_register_model)) begin
+            `uvm_error(get_type_name(), "Failed to get register_model from config DB")
+        end else begin
+            `uvm_info(get_type_name(), "Successfully retrieved register_model from config DB", UVM_HIGH)
+        end
+
+        if (!uvm_config_db#(int_routing_model)::get(m_sequencer, "", "routing_model", m_routing_model)) begin
+            `uvm_error(get_type_name(), "Failed to get routing_model from config DB")
+        end else begin
+            `uvm_info(get_type_name(), "Successfully retrieved routing_model from config DB", UVM_HIGH)
         end
         
         `uvm_info(get_type_name(), "Interrupt sequence initialization completed", UVM_LOW)
@@ -101,7 +118,7 @@ class int_base_sequence extends uvm_sequence;
         `uvm_info(get_type_name(), $sformatf("Sequence '%s' adding expected interrupt with mask: %s", get_sequence_path(), info.name), UVM_MEDIUM)
 
         // Get expected destinations considering masks
-        int_routing_model::get_expected_destinations_with_mask(info.name, expected_destinations);
+        m_routing_model.get_expected_destinations_with_mask(info.name, expected_destinations, m_register_model);
 
         if (expected_destinations.size() == 0) begin
             `uvm_info(get_type_name(), $sformatf("⚠️  Interrupt '%s' is completely masked - no expectations will be registered", info.name), UVM_MEDIUM)
