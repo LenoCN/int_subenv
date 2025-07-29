@@ -294,6 +294,7 @@ class int_routing_model extends uvm_object;
         interrupt_info_s info;
         bit routing_enabled = 0;
         bit mask_enabled = 1;
+        bit final_result;
 
         `uvm_info("INT_ROUTING_MODEL", $sformatf("🔮 Predicting routing for interrupt '%s' to destination '%s'", interrupt_name, destination), UVM_HIGH)
 
@@ -333,7 +334,7 @@ class int_routing_model extends uvm_object;
                   interrupt_name, destination, mask_enabled ? "ENABLED" : "MASKED"), UVM_HIGH)
 
         // Interrupt will be routed if both routing is enabled AND mask is enabled
-        bit final_result = (routing_enabled && mask_enabled);
+        final_result = (routing_enabled && mask_enabled);
         `uvm_info("INT_ROUTING_MODEL", $sformatf("🎯 Final routing prediction: interrupt '%s' to '%s' = %s (routing=%b, mask=%b)",
                   interrupt_name, destination, final_result ? "WILL ROUTE" : "NO ROUTING", routing_enabled, mask_enabled), UVM_MEDIUM)
         return final_result;
