@@ -116,22 +116,27 @@ class int_base_sequence extends uvm_sequence;
 
         `uvm_info(get_type_name(), "=== SEQUENCE ADDING EXPECTED INTERRUPT WITH MASK ===", UVM_MEDIUM)
         `uvm_info(get_type_name(), $sformatf("Sequence '%s' adding expected interrupt with mask: %s", get_sequence_path(), info.name), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("📊 Original interrupt routing: AP=%b, SCP=%b, MCP=%b, IMU=%b, IO=%b, OTHER_DIE=%b",
+                  info.to_ap, info.to_scp, info.to_mcp, info.to_imu, info.to_io, info.to_other_die), UVM_MEDIUM)
 
         // Get expected destinations considering masks
+        `uvm_info(get_type_name(), $sformatf("🔍 Calling routing model to get expected destinations with mask for: %s", info.name), UVM_HIGH)
         m_routing_model.get_expected_destinations_with_mask(info.name, expected_destinations, m_register_model);
 
         if (expected_destinations.size() == 0) begin
             `uvm_info(get_type_name(), $sformatf("⚠️  Interrupt '%s' is completely masked - no expectations will be registered", info.name), UVM_MEDIUM)
+            `uvm_info(get_type_name(), $sformatf("📋 This means all destinations are either not routed or masked by registers"), UVM_MEDIUM)
             `uvm_info(get_type_name(), "=== END SEQUENCE EXPECTED INTERRUPT WITH MASK ===", UVM_MEDIUM)
             return;
         end
 
-        `uvm_info(get_type_name(), "Expected routing destinations (after mask filtering):", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("✅ Found %0d expected destinations after mask filtering:", expected_destinations.size()), UVM_MEDIUM)
         foreach (expected_destinations[i]) begin
             `uvm_info(get_type_name(), $sformatf("  ✅ %s", expected_destinations[i]), UVM_MEDIUM)
         end
 
         // Create modified info with only unmasked destinations
+        `uvm_info(get_type_name(), $sformatf("🔧 Creating masked interrupt info for: %s", info.name), UVM_HIGH)
         masked_info = info;
         masked_info.to_ap = 0;
         masked_info.to_scp = 0;
@@ -141,18 +146,41 @@ class int_base_sequence extends uvm_sequence;
         masked_info.to_other_die = 0;
 
         // Set only the unmasked destinations
+        `uvm_info(get_type_name(), $sformatf("🎯 Setting unmasked destinations for interrupt: %s", info.name), UVM_HIGH)
         foreach (expected_destinations[i]) begin
             case (expected_destinations[i])
-                "AP": masked_info.to_ap = 1;
-                "SCP": masked_info.to_scp = 1;
-                "MCP": masked_info.to_mcp = 1;
-                "IMU": masked_info.to_imu = 1;
-                "IO": masked_info.to_io = 1;
-                "OTHER_DIE": masked_info.to_other_die = 1;
+                "AP": begin
+                    masked_info.to_ap = 1;
+                    `uvm_info(get_type_name(), $sformatf("✅ Enabled AP destination for %s", info.name), UVM_HIGH)
+                end
+                "SCP": begin
+                    masked_info.to_scp = 1;
+                    `uvm_info(get_type_name(), $sformatf("✅ Enabled SCP destination for %s", info.name), UVM_HIGH)
+                end
+                "MCP": begin
+                    masked_info.to_mcp = 1;
+                    `uvm_info(get_type_name(), $sformatf("✅ Enabled MCP destination for %s", info.name), UVM_HIGH)
+                end
+                "IMU": begin
+                    masked_info.to_imu = 1;
+                    `uvm_info(get_type_name(), $sformatf("✅ Enabled IMU destination for %s", info.name), UVM_HIGH)
+                end
+                "IO": begin
+                    masked_info.to_io = 1;
+                    `uvm_info(get_type_name(), $sformatf("✅ Enabled IO destination for %s", info.name), UVM_HIGH)
+                end
+                "OTHER_DIE": begin
+                    masked_info.to_other_die = 1;
+                    `uvm_info(get_type_name(), $sformatf("✅ Enabled OTHER_DIE destination for %s", info.name), UVM_HIGH)
+                end
             endcase
         end
 
+        `uvm_info(get_type_name(), $sformatf("📊 Final masked interrupt routing: AP=%b, SCP=%b, MCP=%b, IMU=%b, IO=%b, OTHER_DIE=%b",
+                  masked_info.to_ap, masked_info.to_scp, masked_info.to_mcp, masked_info.to_imu, masked_info.to_io, masked_info.to_other_die), UVM_MEDIUM)
+
         // Register the masked expectation
+        `uvm_info(get_type_name(), $sformatf("📝 Registering masked expectation for interrupt: %s", info.name), UVM_HIGH)
         add_expected(masked_info);
 
         `uvm_info(get_type_name(), "=== END SEQUENCE EXPECTED INTERRUPT WITH MASK ===", UVM_MEDIUM)
