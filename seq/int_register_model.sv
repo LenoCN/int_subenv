@@ -80,7 +80,7 @@ class int_register_model extends uvm_object;
     task init_registers();
         // Get interrupt register base address from memory map
         // This follows the same pattern as tc_int_sanity.sv
-        interrupt_reg_base = memory_map.get_start_addr("interrupt_csr", soc_vargs::main_core);
+        interrupt_reg_base = memory_map.get_start_addr("iosub_sysctrl", soc_vargs::main_core);
         `uvm_info("INT_REG_MODEL", $sformatf("Interrupt register base address: 0x%016x", interrupt_reg_base), UVM_MEDIUM)
 
         // Clear the mask value cache
