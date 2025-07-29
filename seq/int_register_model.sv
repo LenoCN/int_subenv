@@ -3,6 +3,7 @@
 
 // Hardware register model for interrupt mask and status registers
 // Uses reg_seq for actual hardware access like tc_int_sanity.sv
+typedef class int_routing_model;
 class int_register_model extends uvm_object;
     `uvm_object_utils(int_register_model)
 
@@ -221,6 +222,7 @@ class int_register_model extends uvm_object;
         int bit_index;
         int dest_index;
         int sub_index;
+        int reg_bit;
 
         `uvm_info("INT_REG_MODEL", $sformatf("🔍 Checking mask status for interrupt '%s' to destination '%s'",
                   interrupt_name, destination), UVM_HIGH)
@@ -250,7 +252,6 @@ class int_register_model extends uvm_object;
                 "SCP": begin
                     `uvm_info("INT_REG_MODEL", $sformatf("🎯 Processing SCP destination for IOSUB normal interrupt"), UVM_HIGH)
                     // IOSUB normal interrupts: 45-bit mask split across 2 registers
-                    int reg_bit;
                     if (sub_index >= 0 && sub_index <= 9) begin
                         reg_bit = sub_index;  // Index 0-9 maps to bit 0-9
                         `uvm_info("INT_REG_MODEL", $sformatf("📊 Range 0-9: sub_index=%0d → reg_bit=%0d", sub_index, reg_bit), UVM_HIGH)
