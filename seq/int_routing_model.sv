@@ -398,18 +398,27 @@ class int_routing_model extends uvm_object;
                   info.to_ap, info.to_scp, info.to_mcp, info.to_imu, info.to_io, info.to_other_die), UVM_MEDIUM)
 
         // Check each destination with mask consideration
-        all_destinations[$] = {"AP", "SCP", "MCP", "IMU", "IO", "OTHER_DIE"};
+        all_destinations[$] = {"AP", "SCP", "MCP", "IMU", "IO", "OTHER_DIE", "ACCEL", "PSUB", "PCIE1", "CSUB"};
         foreach (all_destinations[i]) begin
             bit routing_enabled = predict_interrupt_routing_with_mask(interrupt_name, all_destinations[i], register_model);
             bit mask_status = !register_model.is_interrupt_masked(interrupt_name, all_destinations[i], this);
+            bit base_routing;
+            case (all_destinations[i])
+                "AP": base_routing = info.to_ap;
+                "SCP": base_routing = info.to_scp;
+                "MCP": base_routing = info.to_mcp;
+                "IMU": base_routing = info.to_imu;
+                "IO": base_routing = info.to_io;
+                "OTHER_DIE": base_routing = info.to_other_die;
+                "ACCEL": base_routing = info.to_imu; // ACCEL uses IMU routing
+                "PSUB": base_routing = (info.group == PSUB); // PSUB interrupts route to PSUB
+                "PCIE1": base_routing = (info.group == PCIE1); // PCIE1 interrupts route to PCIE1
+                "CSUB": base_routing = (info.group == CSUB); // CSUB interrupts route to CSUB
+                default: base_routing = 0;
+            endcase
+
             `uvm_info("INT_ROUTING_MODEL", $sformatf("  %s: routing=%b, mask_enabled=%b, final=%b",
-                      all_destinations[i],
-                      (all_destinations[i] == "AP") ? info.to_ap :
-                      (all_destinations[i] == "SCP") ? info.to_scp :
-                      (all_destinations[i] == "MCP") ? info.to_mcp :
-                      (all_destinations[i] == "IMU") ? info.to_imu :
-                      (all_destinations[i] == "IO") ? info.to_io : info.to_other_die,
-                      mask_status, routing_enabled), UVM_MEDIUM)
+                      all_destinations[i], base_routing, mask_status, routing_enabled), UVM_MEDIUM)
         end
 
         get_expected_destinations_with_mask(interrupt_name, destinations, register_model);

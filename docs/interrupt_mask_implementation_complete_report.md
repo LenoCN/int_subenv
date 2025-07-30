@@ -10,7 +10,13 @@
 
 ## 实现总结
 
-✅ **成功实现了完整的中断mask映射逻辑，正确区分了IOSUB normal中断和SCP/MCP一般中断的不同处理方式**
+✅ **成功实现了完整的中断mask映射逻辑，涵盖所有子系统：IOSUB、SCP、MCP、ACCEL、PSUB、PCIE1、CSUB等**
+
+### 🆕 最新更新 (2025-07-30)
+✅ **新增ACCEL子系统mask处理** - 支持32位ACCEL mask寄存器
+✅ **新增PSUB/PCIE1子系统mask处理** - 支持20位mask寄存器
+✅ **新增CSUB子系统支持** - 复用现有SCP/MCP mask逻辑
+✅ **完善路由模型** - 支持所有子系统的mask感知路由预测
 
 ## 核心理解
 
@@ -35,6 +41,29 @@
 - **特征**: 包括MCP组中断、IOSUB一般中断等所有路由到MCP的中断
 - **映射**: `dest_index_mcp` → 146-bit mask (5个寄存器)
 - **寄存器**: `mask_iosub_to_mcp_intr_0/1/2/3/4`
+
+#### 4. ACCEL中断 (32-bit mask) 🆕
+- **特征**: ACCEL子系统中断，使用IMU路由
+- **映射**: `dest_index_imu` → 32-bit mask (1个寄存器)
+- **寄存器**: `mask_iosub_to_accel_intr_0`
+- **地址**: `0x1_C0A0`
+
+#### 5. PSUB中断 (20-bit mask) 🆕
+- **特征**: PSUB子系统中断
+- **映射**: `sub_index` → 20-bit mask (1个寄存器)
+- **寄存器**: `mask_psub_to_iosub_intr`
+- **地址**: `0x1_C0B8`
+
+#### 6. PCIE1中断 (20-bit mask) 🆕
+- **特征**: PCIE1子系统中断
+- **映射**: `sub_index` → 20-bit mask (1个寄存器)
+- **寄存器**: `mask_pcie1_to_iosub_intr`
+- **地址**: `0x1_C0BC`
+
+#### 7. CSUB中断 🆕
+- **特征**: CSUB子系统中断，复用SCP/MCP mask逻辑
+- **映射**: 使用现有的`dest_index_scp`/`dest_index_mcp`映射
+- **寄存器**: 复用`mask_iosub_to_scp_intr_*`和`mask_iosub_to_mcp_intr_*`
 
 ## 实现逻辑
 
