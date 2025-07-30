@@ -404,6 +404,67 @@ class int_register_model extends uvm_object;
                     end
                 end
 
+                "ACCEL": begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("🎯 Processing ACCEL destination"), UVM_HIGH)
+                    // Get dest_index for ACCEL destination (using IMU routing)
+                    dest_index = get_interrupt_dest_index(interrupt_name, destination, routing_model);
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Retrieved dest_index: %0d for ACCEL destination", dest_index), UVM_HIGH)
+
+                    if (dest_index < 0) begin
+                        `uvm_info("INT_REG_MODEL", $sformatf("❌ Invalid dest_index (%0d) for ACCEL, assuming not masked", dest_index), UVM_MEDIUM)
+                        return 0; // Invalid index, assume not masked
+                    end
+
+                    // ACCEL uses a single 32-bit mask register
+                    if (dest_index <= 31) begin
+                        addr = ADDR_MASK_IOSUB_TO_ACCEL_INTR_0;  // [31:0]
+                        bit_index = dest_index;
+                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using ACCEL register: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                    end else begin
+                        `uvm_info("INT_REG_MODEL", $sformatf("❌ dest_index (%0d) out of ACCEL mask range [0-31], assuming masked", dest_index), UVM_MEDIUM)
+                        return 1; // Out of mask range, assume masked
+                    end
+                end
+
+                "PSUB": begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("🎯 Processing PSUB destination"), UVM_HIGH)
+                    // PSUB interrupts use sub_index for mask mapping
+                    sub_index = get_interrupt_sub_index(interrupt_name, routing_model);
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Retrieved sub_index: %0d for PSUB", sub_index), UVM_HIGH)
+
+                    if (sub_index < 0 || sub_index > 19) begin
+                        `uvm_info("INT_REG_MODEL", $sformatf("❌ Invalid sub_index (%0d) for PSUB, assuming not masked", sub_index), UVM_MEDIUM)
+                        return 0; // Invalid index, assume not masked
+                    end
+
+                    addr = ADDR_MASK_PSUB_TO_IOSUB_INTR;  // [19:0]
+                    bit_index = sub_index;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Using PSUB register: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end
+
+                "PCIE1": begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("🎯 Processing PCIE1 destination"), UVM_HIGH)
+                    // PCIE1 interrupts use sub_index for mask mapping
+                    sub_index = get_interrupt_sub_index(interrupt_name, routing_model);
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Retrieved sub_index: %0d for PCIE1", sub_index), UVM_HIGH)
+
+                    if (sub_index < 0 || sub_index > 19) begin
+                        `uvm_info("INT_REG_MODEL", $sformatf("❌ Invalid sub_index (%0d) for PCIE1, assuming not masked", sub_index), UVM_MEDIUM)
+                        return 0; // Invalid index, assume not masked
+                    end
+
+                    addr = ADDR_MASK_PCIE1_TO_IOSUB_INTR;  // [19:0]
+                    bit_index = sub_index;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Using PCIE1 register: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end
+
+                "CSUB": begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("🎯 Processing CSUB destination - using existing SCP/MCP mask logic"), UVM_HIGH)
+                    // CSUB interrupts route to SCP/MCP and use their mask registers
+                    // This will be handled by the existing SCP/MCP logic above
+                    return 0; // CSUB interrupts use SCP/MCP mask logic, not separate CSUB masks
+                end
+
                 default: begin
                     // For other destinations, check specific interrupt types
                     case (interrupt_name)
@@ -478,6 +539,10 @@ class int_register_model extends uvm_object;
 
         read_register(ADDR_MASK_IOSUB_TO_MCP_NORMAL_INTR_0, data);
         `uvm_info("INT_REG_MODEL", $sformatf("IOSUB->MCP Normal[0]: 0x%08x", data), UVM_MEDIUM)
+
+        // Read and print ACCEL mask register
+        read_register(ADDR_MASK_IOSUB_TO_ACCEL_INTR_0, data);
+        `uvm_info("INT_REG_MODEL", $sformatf("IOSUB->ACCEL Mask: 0x%08x", data), UVM_MEDIUM)
 
         // Read and print PSUB/PCIE1 mask registers
         read_register(ADDR_MASK_PSUB_TO_IOSUB_INTR, data);
