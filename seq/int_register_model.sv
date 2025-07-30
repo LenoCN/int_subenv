@@ -428,7 +428,7 @@ class int_register_model extends uvm_object;
                             addr = ADDR_MASK_PLL_INTR_4;
                             bit_index = 0;
                         end
-                        default: return 1; // Masked for other destinations
+                        default: return 0; // Unmasked for other destinations
                     endcase
                 end
             endcase
