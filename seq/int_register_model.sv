@@ -671,6 +671,21 @@ class int_register_model extends uvm_object;
                 end
             end
 
+            "ACCEL": begin
+                `uvm_info("INT_REG_MODEL", $sformatf("🎯 Layer 2: Processing ACCEL destination for general interrupt"), UVM_HIGH)
+                // ACCEL: dest_index_accel maps directly to mask bit position
+                // ACCEL uses a single 32-bit mask register
+                if (dest_index < 0 || dest_index > 31) begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("❌ Layer 2: dest_index (%0d) out of valid ACCEL mask range [0-31], assuming masked", dest_index), UVM_MEDIUM)
+                    return 1; // Out of valid mask range, assume masked
+                end
+
+                addr = ADDR_MASK_IOSUB_TO_ACCEL_INTR_0;  // [31:0]
+                bit_index = dest_index;  // Direct mapping
+                `uvm_info("INT_REG_MODEL", $sformatf("📊 Layer 2: ACCEL mapping: dest_index=%0d → bit_index=%0d", dest_index, bit_index), UVM_HIGH)
+                `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 2: Using ACCEL register: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+            end
+
             default: begin
                 `uvm_info("INT_REG_MODEL", $sformatf("❌ Layer 2: Unsupported destination '%s', assuming unmasked", destination), UVM_MEDIUM)
                 return 0; // Unmasked for other destinations
