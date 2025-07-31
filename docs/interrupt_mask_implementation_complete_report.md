@@ -44,7 +44,7 @@
 
 #### 4. ACCEL中断 (32-bit mask) 🆕
 - **特征**: ACCEL子系统中断，使用IMU路由
-- **映射**: `dest_index_imu` → 32-bit mask (1个寄存器)
+- **映射**: `dest_index_accel` → 32-bit mask (1个寄存器)
 - **寄存器**: `mask_iosub_to_accel_intr_0`
 - **地址**: `0x1_C0A0`
 

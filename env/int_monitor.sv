@@ -81,7 +81,7 @@ class int_monitor extends uvm_monitor;
             if (info.rtl_path_ap != "") monitor_single_path(info, "AP", info.rtl_path_ap);
             if (info.rtl_path_scp != "") monitor_single_path(info, "SCP", info.rtl_path_scp);
             if (info.rtl_path_mcp != "") monitor_single_path(info, "MCP", info.rtl_path_mcp);
-            if (info.rtl_path_imu != "") monitor_single_path(info, "IMU", info.rtl_path_imu);
+            if (info.rtl_path_accel != "") monitor_single_path(info, "ACCEL", info.rtl_path_accel);
             // IO monitoring disabled - iosub_to_io monitoring mechanism turned off
             // if (info.rtl_path_io != "") monitor_single_path(info, "IO", info.rtl_path_io);
             if (info.rtl_path_other_die != "") monitor_single_path(info, "OTHER_DIE", info.rtl_path_other_die);
@@ -194,7 +194,7 @@ class int_monitor extends uvm_monitor;
             "AP": rtl_path = info.rtl_path_ap;
             "SCP": rtl_path = info.rtl_path_scp;
             "MCP": rtl_path = info.rtl_path_mcp;
-            "IMU": rtl_path = info.rtl_path_imu;
+            "ACCEL": rtl_path = info.rtl_path_accel;
             "IO": rtl_path = info.rtl_path_io;
             "OTHER_DIE": rtl_path = info.rtl_path_other_die;
             default: rtl_path = "UNKNOWN_DEST";
@@ -267,10 +267,10 @@ class int_monitor extends uvm_monitor;
                     `uvm_info(get_type_name(), $sformatf("MCP destination signal: %s = %0d", info.rtl_path_mcp, current_dest_value), UVM_HIGH)
                 end
             end
-            "IMU": begin
-                routing_valid = info.to_imu;
-                if (info.rtl_path_imu != "" && uvm_hdl_read(info.rtl_path_imu, current_dest_value)) begin
-                    `uvm_info(get_type_name(), $sformatf("IMU destination signal: %s = %0d", info.rtl_path_imu, current_dest_value), UVM_HIGH)
+            "ACCEL": begin
+                routing_valid = info.to_accel;
+                if (info.rtl_path_accel != "" && uvm_hdl_read(info.rtl_path_accel, current_dest_value)) begin
+                    `uvm_info(get_type_name(), $sformatf("ACCEL destination signal: %s = %0d", info.rtl_path_accel, current_dest_value), UVM_HIGH)
                 end
             end
             "IO": begin

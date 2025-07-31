@@ -44,7 +44,7 @@ def verify_mscp_source():
                 'to_ap': str(row['to AP?']).upper() if pd.notna(row['to AP?']) else 'NO',
                 'to_scp': str(row['to SCP?']).upper() if pd.notna(row['to SCP?']) else 'NO',
                 'to_mcp': str(row['to MCP?']).upper() if pd.notna(row['to MCP?']) else 'NO',
-                'to_imu': str(row['to IMU?']).upper() if pd.notna(row['to IMU?']) else 'NO'
+                'to_accel': str(row['to ACCEL?']).upper() if pd.notna(row['to ACCEL?']) else 'NO'
             }
     
     # Read generated SystemVerilog file

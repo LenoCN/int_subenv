@@ -61,7 +61,7 @@ class int_driver extends uvm_driver #(int_stimulus_item);
         if (item.interrupt_info.to_ap) `uvm_info(get_type_name(), $sformatf("  ✅ AP: %s", item.interrupt_info.rtl_path_ap), UVM_MEDIUM);
         if (item.interrupt_info.to_scp) `uvm_info(get_type_name(), $sformatf("  ✅ SCP: %s", item.interrupt_info.rtl_path_scp), UVM_MEDIUM);
         if (item.interrupt_info.to_mcp) `uvm_info(get_type_name(), $sformatf("  ✅ MCP: %s", item.interrupt_info.rtl_path_mcp), UVM_MEDIUM);
-        if (item.interrupt_info.to_imu) `uvm_info(get_type_name(), $sformatf("  ✅ IMU: %s", item.interrupt_info.rtl_path_imu), UVM_MEDIUM);
+        if (item.interrupt_info.to_accel) `uvm_info(get_type_name(), $sformatf("  ✅ ACCEL: %s", item.interrupt_info.rtl_path_accel), UVM_MEDIUM);
         if (item.interrupt_info.to_io) `uvm_info(get_type_name(), $sformatf("  ✅ IO: %s", item.interrupt_info.rtl_path_io), UVM_MEDIUM);
         if (item.interrupt_info.to_other_die) `uvm_info(get_type_name(), $sformatf("  ✅ OTHER_DIE: %s", item.interrupt_info.rtl_path_other_die), UVM_MEDIUM);
 

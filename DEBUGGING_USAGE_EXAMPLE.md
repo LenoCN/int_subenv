@@ -87,7 +87,7 @@ Searching for match: some_interrupt@AP
 Expected key format: some_interrupt@AP
 Interrupt routing configuration for some_interrupt:
   - to_ap: 1, to_scp: 0, to_mcp: 0
-  - to_imu: 0, to_io: 0, to_other_die: 0
+  - to_accel: 0, to_io: 0, to_other_die: 0
 Expected interrupts queue is EMPTY - no interrupts were registered!
 This suggests the test sequence did not register any expected interrupts.
 

@@ -76,7 +76,7 @@ class test_race_condition_fix extends uvm_test;
         test_info.to_scp = 1;
         test_info.to_ap = 0;
         test_info.to_mcp = 0;
-        test_info.to_imu = 0;
+        test_info.to_accel = 0;
         test_info.to_io = 0;
         test_info.to_other_die = 0;
         
@@ -118,7 +118,7 @@ class test_race_condition_fix extends uvm_test;
         test_info.to_scp = 1;
         test_info.to_ap = 1;
         test_info.to_mcp = 1;
-        test_info.to_imu = 0;
+        test_info.to_accel = 0;
         test_info.to_io = 0;
         test_info.to_other_die = 0;
         

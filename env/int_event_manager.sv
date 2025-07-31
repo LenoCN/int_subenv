@@ -36,8 +36,8 @@ class int_event_manager extends uvm_object;
         if (info.to_mcp) begin
             event_keys.push_back($sformatf("%s@%s", info.name, "MCP"));
         end
-        if (info.to_imu) begin
-            event_keys.push_back($sformatf("%s@%s", info.name, "IMU"));
+        if (info.to_accel) begin
+            event_keys.push_back($sformatf("%s@%s", info.name, "ACCEL"));
         end
         if (info.to_io) begin
             event_keys.push_back($sformatf("%s@%s", info.name, "IO"));

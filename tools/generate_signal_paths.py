@@ -396,7 +396,7 @@ class SignalPathGenerator:
         Uses configuration file to determine the correct destination paths.
 
         Args:
-            destination: Target destination (ap, scp, mcp, imu, io, other_die)
+            destination: Target destination (ap, scp, mcp, accel, io, other_die)
             index: Index within the destination signal
             interrupt_name: Optional interrupt name for hierarchy selection
         """
@@ -432,9 +432,9 @@ class SignalPathGenerator:
                     else:
                         mcp_base = self.base_hierarchy.get('mcp_top', '')
                         return f"{mcp_base}.{signal_name}[{index}]"
-                elif destination == 'imu':
+                elif destination == 'accel':
                     # IMU signals can be monitored at iosub_int_sub for internal boundary checking
-                    if interrupt_name and any(pattern in interrupt_name for pattern in ["accel", "imu"]):
+                    if interrupt_name and any(pattern in interrupt_name for pattern in ["accel"]):
                         int_sub_base = self.base_hierarchy.get('iosub_int_sub', '')
                         return f"{int_sub_base}.{signal_name}[{index}]"
                     else:

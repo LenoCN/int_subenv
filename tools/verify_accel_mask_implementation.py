@@ -101,7 +101,7 @@ def check_routing_model_support():
     
     # 检查路由状态检查逻辑
     routing_checks = [
-        r'"ACCEL":\s*base_routing\s*=\s*info\.to_imu',
+        r'"ACCEL":\s*base_routing\s*=\s*info\.to_accel',
         r'"PSUB":\s*base_routing\s*=.*info\.group\s*==\s*PSUB',
         r'"PCIE1":\s*base_routing\s*=.*info\.group\s*==\s*PCIE1',
         r'"CSUB":\s*base_routing\s*=.*info\.group\s*==\s*CSUB',
