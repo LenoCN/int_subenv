@@ -156,6 +156,14 @@ def verify_serial_mask_implementation():
         r'Layer1=.*Layer2=.*Final='
     ]
 
+    # 检查目的地特定的处理逻辑
+    destination_specific_patterns = [
+        r'"SCP",\s*"MCP":.*begin',
+        r'SCP/MCP destination:.*Using serial mask processing',
+        r'"ACCEL":.*begin',
+        r'ACCEL destination:.*Using single-layer mask processing'
+    ]
+
     found_patterns = 0
     for pattern in serial_mask_patterns:
         if re.search(pattern, content):
@@ -179,6 +187,14 @@ def verify_serial_mask_implementation():
         else:
             print(f"❌ 未发现预期的辅助函数: {pattern}")
 
+    # 检查目的地特定的处理逻辑
+    for pattern in destination_specific_patterns:
+        if re.search(pattern, content):
+            print(f"✅ 发现目的地特定处理逻辑: {pattern}")
+            found_patterns += 1
+        else:
+            print(f"❌ 未发现目的地特定处理逻辑: {pattern}")
+
     # 检查ACCEL目标支持
     accel_patterns = [
         r'"ACCEL":.*begin',
@@ -193,11 +209,11 @@ def verify_serial_mask_implementation():
         else:
             print(f"❌ 未发现ACCEL目标支持: {pattern}")
 
-    if found_patterns >= 10:  # 更新期望的模式数量
+    if found_patterns >= 14:  # 更新期望的模式数量
         print("✅ 串行mask处理实现验证通过")
         return True
     else:
-        print(f"❌ 串行mask处理实现不完整: {found_patterns}/12")
+        print(f"❌ 串行mask处理实现不完整: {found_patterns}/16")
         return False
 
 def verify_iosub_normal_intr_lookup():
