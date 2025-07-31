@@ -179,11 +179,25 @@ def verify_serial_mask_implementation():
         else:
             print(f"❌ 未发现预期的辅助函数: {pattern}")
 
-    if found_patterns >= 7:  # 至少要有7个关键模式
+    # 检查ACCEL目标支持
+    accel_patterns = [
+        r'"ACCEL":.*begin',
+        r'ADDR_MASK_IOSUB_TO_ACCEL_INTR_0',
+        r'Layer 2:.*Processing ACCEL destination'
+    ]
+
+    for pattern in accel_patterns:
+        if re.search(pattern, content):
+            print(f"✅ 发现ACCEL目标支持: {pattern}")
+            found_patterns += 1
+        else:
+            print(f"❌ 未发现ACCEL目标支持: {pattern}")
+
+    if found_patterns >= 10:  # 更新期望的模式数量
         print("✅ 串行mask处理实现验证通过")
         return True
     else:
-        print(f"❌ 串行mask处理实现不完整: {found_patterns}/9")
+        print(f"❌ 串行mask处理实现不完整: {found_patterns}/12")
         return False
 
 def verify_iosub_normal_intr_lookup():
@@ -219,6 +233,52 @@ def verify_iosub_normal_intr_lookup():
         print("⚠️  这可能影响串行mask的第二层处理")
         return False
 
+def verify_accel_destination_support():
+    """验证ACCEL目标的支持"""
+    print("\n🔍 验证ACCEL目标的中断路由支持...")
+
+    file_path = Path("seq/int_map_entries.svh")
+    if not file_path.exists():
+        print(f"❌ 文件不存在: {file_path}")
+        return False
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    # 查找路由到ACCEL目标的中断
+    pattern = r'name:"([^"]*)".*?dest_index_accel:(\d+)'
+    matches = re.findall(pattern, content)
+
+    if matches:
+        print(f"✅ 找到 {len(matches)} 个路由到ACCEL目标的中断:")
+        accel_interrupts = {}
+        for name, index in matches:
+            index_int = int(index)
+            if index_int not in accel_interrupts:
+                accel_interrupts[index_int] = []
+            accel_interrupts[index_int].append(name)
+
+        # 显示按index排序的中断
+        for index in sorted(accel_interrupts.keys()):
+            interrupts = accel_interrupts[index]
+            if len(interrupts) == 1:
+                print(f"   - {interrupts[0]}: dest_index_accel={index}")
+            else:
+                print(f"   - dest_index_accel={index}: {', '.join(interrupts)}")
+
+        # 验证index范围
+        max_index = max(accel_interrupts.keys())
+        if max_index <= 31:
+            print(f"✅ 所有ACCEL中断的dest_index都在有效范围[0-31]内 (最大值: {max_index})")
+            return True
+        else:
+            print(f"❌ 发现超出范围的ACCEL dest_index: {max_index} > 31")
+            return False
+    else:
+        print("⚠️  未找到任何路由到ACCEL目标的中断")
+        print("   这意味着ACCEL目标支持可能不是必需的")
+        return True  # 不是错误，只是没有ACCEL路由
+
 def main():
     """主函数"""
     print("=" * 60)
@@ -247,9 +307,14 @@ def main():
     if not verify_iosub_normal_intr_lookup():
         success = False
 
+    # 验证 ACCEL 目标支持
+    if not verify_accel_destination_support():
+        success = False
+
     print("\n" + "=" * 60)
     if success:
         print("✅ 所有验证通过！IOSUB normal 中断串行mask处理实现正确")
+        print("✅ ACCEL目标支持已正确实现")
     else:
         print("❌ 验证失败，请检查修改")
     print("=" * 60)

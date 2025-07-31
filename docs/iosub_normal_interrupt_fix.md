@@ -88,7 +88,21 @@ end
 
 ### 3. 辅助函数实现
 - **`check_iosub_normal_mask_layer()`**: 检查第一层IOSUB normal mask
-- **`check_general_mask_layer()`**: 检查第二层SCP/MCP general mask
+- **`check_general_mask_layer()`**: 检查第二层SCP/MCP/ACCEL general mask
+
+### 4. ACCEL目标支持
+```systemverilog
+"ACCEL": begin
+    // ACCEL: dest_index_accel maps directly to mask bit position
+    // ACCEL uses a single 32-bit mask register
+    if (dest_index < 0 || dest_index > 31) begin
+        return 1; // Out of valid mask range, assume masked
+    end
+
+    addr = ADDR_MASK_IOSUB_TO_ACCEL_INTR_0;  // [31:0]
+    bit_index = dest_index;  // Direct mapping
+end
+```
 
 ### 修复优势
 1. **准确性**: 基于实际的index范围规则，不依赖字符串匹配
