@@ -303,8 +303,8 @@ class int_register_model extends uvm_object;
                 end
 
                 default: begin
-                    `uvm_info("INT_REG_MODEL", $sformatf("❌ Unsupported destination '%s' for IOSUB normal interrupt, assuming masked", destination), UVM_MEDIUM)
-                    return 1; // Masked for other destinations
+                    `uvm_info("INT_REG_MODEL", $sformatf("❌ Unsupported destination '%s' for IOSUB normal interrupt, assuming unmasked", destination), UVM_MEDIUM)
+                    return 0; // Unmasked for other destinations
                 end
             endcase
         end
