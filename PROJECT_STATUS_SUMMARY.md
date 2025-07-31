@@ -8,6 +8,7 @@
 **最后更新**: 2025-07-30
 
 ### 🆕 最新更新 (2025-07-31)
+✅ **修复Mask一致性问题** - 统一add_expected_with_mask和wait_for_interrupt_detection的mask逻辑
 ✅ **统一ACCEL和IMU术语** - 移除所有IMU引用，统一使用ACCEL
 ✅ **完成ACCEL子系统mask处理** - 32位mask寄存器支持
 ✅ **完成PSUB/PCIE1子系统mask处理** - 20位mask寄存器支持

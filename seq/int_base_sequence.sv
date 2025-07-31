@@ -67,6 +67,91 @@ class int_base_sequence extends uvm_sequence;
         end
     endtask
 
+    // Helper task to wait for interrupt detection with mask consideration
+    // This ensures consistency with add_expected_with_mask behavior
+    task wait_for_interrupt_detection_with_mask(interrupt_info_s info, int timeout_ns = -1);
+        string expected_destinations[$];
+        interrupt_info_s masked_info;
+
+        `uvm_info(get_type_name(), "=== SEQUENCE WAITING FOR INTERRUPT WITH MASK ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("Sequence '%s' waiting for interrupt with mask: %s", get_sequence_path(), info.name), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("📊 Original interrupt routing: AP=%b, SCP=%b, MCP=%b, ACCEL=%b, IO=%b, OTHER_DIE=%b",
+                  info.to_ap, info.to_scp, info.to_mcp, info.to_accel, info.to_io, info.to_other_die), UVM_MEDIUM)
+
+        // Use global timing config if no specific timeout provided
+        if (timeout_ns == -1) begin
+            init_timing_config();
+            timeout_ns = global_timing_config.detection_timeout_ns;
+        end
+
+        // Get expected destinations considering masks
+        `uvm_info(get_type_name(), $sformatf("🔍 Calling routing model to get expected destinations with mask for: %s", info.name), UVM_HIGH)
+        m_routing_model.get_expected_destinations_with_mask(info.name, expected_destinations, m_register_model);
+
+        if (expected_destinations.size() == 0) begin
+            `uvm_info(get_type_name(), $sformatf("⚠️  Interrupt '%s' is completely masked - no wait needed", info.name), UVM_MEDIUM)
+            `uvm_info(get_type_name(), $sformatf("📋 This means all destinations are either not routed or masked by registers"), UVM_MEDIUM)
+            `uvm_info(get_type_name(), "=== END SEQUENCE WAIT FOR INTERRUPT WITH MASK ===", UVM_MEDIUM)
+            return;
+        end
+
+        `uvm_info(get_type_name(), $sformatf("✅ Found %0d expected destinations after mask filtering:", expected_destinations.size()), UVM_MEDIUM)
+        foreach (expected_destinations[i]) begin
+            `uvm_info(get_type_name(), $sformatf("  ✅ %s", expected_destinations[i]), UVM_MEDIUM)
+        end
+
+        // Create modified info with only unmasked destinations
+        `uvm_info(get_type_name(), $sformatf("🔧 Creating masked interrupt info for wait: %s", info.name), UVM_HIGH)
+        masked_info = info;
+        masked_info.to_ap = 0;
+        masked_info.to_scp = 0;
+        masked_info.to_mcp = 0;
+        masked_info.to_accel = 0;
+        masked_info.to_io = 0;
+        masked_info.to_other_die = 0;
+
+        // Set only the unmasked destinations
+        `uvm_info(get_type_name(), $sformatf("🎯 Setting unmasked destinations for wait: %s", info.name), UVM_HIGH)
+        foreach (expected_destinations[i]) begin
+            case (expected_destinations[i])
+                "AP": begin
+                    masked_info.to_ap = 1;
+                    `uvm_info(get_type_name(), $sformatf("✅ Enabled AP destination for wait %s", info.name), UVM_HIGH)
+                end
+                "SCP": begin
+                    masked_info.to_scp = 1;
+                    `uvm_info(get_type_name(), $sformatf("✅ Enabled SCP destination for wait %s", info.name), UVM_HIGH)
+                end
+                "MCP": begin
+                    masked_info.to_mcp = 1;
+                    `uvm_info(get_type_name(), $sformatf("✅ Enabled MCP destination for wait %s", info.name), UVM_HIGH)
+                end
+                "ACCEL": begin
+                    masked_info.to_accel = 1;
+                    `uvm_info(get_type_name(), $sformatf("✅ Enabled ACCEL destination for wait %s", info.name), UVM_HIGH)
+                end
+                "IO": begin
+                    masked_info.to_io = 1;
+                    `uvm_info(get_type_name(), $sformatf("✅ Enabled IO destination for wait %s", info.name), UVM_HIGH)
+                end
+                "OTHER_DIE": begin
+                    masked_info.to_other_die = 1;
+                    `uvm_info(get_type_name(), $sformatf("✅ Enabled OTHER_DIE destination for wait %s", info.name), UVM_HIGH)
+                end
+            endcase
+        end
+
+        `uvm_info(get_type_name(), $sformatf("📊 Final masked interrupt routing for wait: AP=%b, SCP=%b, MCP=%b, ACCEL=%b, IO=%b, OTHER_DIE=%b",
+                  masked_info.to_ap, masked_info.to_scp, masked_info.to_mcp, masked_info.to_accel, masked_info.to_io, masked_info.to_other_die), UVM_MEDIUM)
+
+        // Wait for the masked interrupt using the original wait function
+        `uvm_info(get_type_name(), $sformatf("📝 Waiting for masked interrupt: %s with timeout %0d ns", info.name, timeout_ns), UVM_HIGH)
+        wait_for_interrupt_detection(masked_info, timeout_ns);
+
+        `uvm_info(get_type_name(), $sformatf("✅ Mask-aware wait completed for interrupt: %s", info.name), UVM_MEDIUM)
+        `uvm_info(get_type_name(), "=== END SEQUENCE WAIT FOR INTERRUPT WITH MASK ===", UVM_MEDIUM)
+    endtask
+
     // Helper function to add expected interrupt
     function void add_expected(interrupt_info_s info);
         int_exp_transaction exp_trans;
