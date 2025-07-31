@@ -19,7 +19,7 @@ class int_lightweight_sequence extends int_base_sequence;
         bit has_other_destinations = 0;
 
         // Check if interrupt has destinations other than to_other_die and to_io
-        if (info.to_ap || info.to_scp || info.to_mcp || info.to_imu) begin
+        if (info.to_ap || info.to_scp || info.to_mcp || info.to_accel) begin
             has_other_destinations = 1;
         end
 
@@ -33,7 +33,7 @@ class int_lightweight_sequence extends int_base_sequence;
 
         // Skip interrupts from SCP that only route to SCP
         if (info.group == SCP && info.to_scp == 1 &&
-            info.to_ap == 0 && info.to_mcp == 0 && info.to_imu == 0 &&
+            info.to_ap == 0 && info.to_mcp == 0 && info.to_accel == 0 &&
             info.to_io == 0 && info.to_other_die == 0) begin
             `uvm_info(get_type_name(), $sformatf("Skipping interrupt '%s' - from SCP and only routes to SCP",
                      info.name), UVM_MEDIUM)
@@ -42,7 +42,7 @@ class int_lightweight_sequence extends int_base_sequence;
 
         // Skip interrupts from MCP that only route to MCP
         if (info.group == MCP && info.to_mcp == 1 &&
-            info.to_ap == 0 && info.to_scp == 0 && info.to_imu == 0 &&
+            info.to_ap == 0 && info.to_scp == 0 && info.to_accel == 0 &&
             info.to_io == 0 && info.to_other_die == 0) begin
             `uvm_info(get_type_name(), $sformatf("Skipping interrupt '%s' - from MCP and only routes to MCP",
                      info.name), UVM_MEDIUM)

@@ -43,9 +43,9 @@ typedef struct {
     bit                  to_mcp;
     string               rtl_path_mcp;
     int                  dest_index_mcp;     // Index in destination interrupt vector
-    bit                  to_imu;
-    string               rtl_path_imu;
-    int                  dest_index_imu;     // Index in destination interrupt vector
+    bit                  to_accel;
+    string               rtl_path_accel;
+    int                  dest_index_accel;     // Index in destination interrupt vector
     bit                  to_io;
     string               rtl_path_io;
     int                  dest_index_io;      // Index in destination interrupt vector

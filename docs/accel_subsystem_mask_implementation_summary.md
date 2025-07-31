@@ -18,7 +18,7 @@
 - **寄存器名**: `mask_iosub_to_accel_intr_0`
 - **地址**: `0x1_C0A0`
 - **位宽**: 32位 `[31:0]`
-- **映射方式**: `dest_index_imu` → mask bit
+- **映射方式**: `dest_index_accel` → mask bit
 
 #### 实现逻辑
 ```systemverilog
@@ -114,7 +114,7 @@ python3 tools/verify_accel_mask_implementation.py
 
 | 子系统 | 映射方式 | 寄存器数量 | 位宽 | 地址范围 |
 |--------|----------|------------|------|----------|
-| ACCEL | dest_index_imu | 1 | 32位 | 0x1_C0A0 |
+| ACCEL | dest_index_accel | 1 | 32位 | 0x1_C0A0 |
 | PSUB | sub_index | 1 | 20位 | 0x1_C0B8 |
 | PCIE1 | sub_index | 1 | 20位 | 0x1_C0BC |
 | CSUB | dest_index_scp/mcp | 复用 | 复用 | 复用现有 |
@@ -123,12 +123,12 @@ python3 tools/verify_accel_mask_implementation.py
 
 #### 新增目标支持
 ```systemverilog
-all_destinations[$] = {"AP", "SCP", "MCP", "IMU", "IO", "OTHER_DIE", "ACCEL", "PSUB", "PCIE1", "CSUB"};
+all_destinations[$] = {"AP", "SCP", "MCP", "ACCEL", "IO", "OTHER_DIE", "PSUB", "PCIE1", "CSUB"};
 ```
 
 #### 路由状态检查
 ```systemverilog
-"ACCEL": base_routing = info.to_imu;
+"ACCEL": base_routing = info.to_accel;
 "PSUB": base_routing = (info.group == PSUB);
 "PCIE1": base_routing = (info.group == PCIE1);
 "CSUB": base_routing = (info.group == CSUB);

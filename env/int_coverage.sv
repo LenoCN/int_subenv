@@ -48,7 +48,7 @@ class int_coverage extends uvm_subscriber #(int_transaction);
             bins ap_dest = {"AP"};
             bins scp_dest = {"SCP"};
             bins mcp_dest = {"MCP"};
-            bins imu_dest = {"IMU"};
+            bins accel_dest = {"ACCEL"};
             bins io_dest = {"IO"};
             bins other_die_dest = {"OTHER_DIE"};
         }
@@ -150,7 +150,7 @@ class int_coverage extends uvm_subscriber #(int_transaction);
         if (m_transaction.interrupt_info.to_ap) count++;
         if (m_transaction.interrupt_info.to_scp) count++;
         if (m_transaction.interrupt_info.to_mcp) count++;
-        if (m_transaction.interrupt_info.to_imu) count++;
+        if (m_transaction.interrupt_info.to_accel) count++;
         if (m_transaction.interrupt_info.to_io) count++;
         if (m_transaction.interrupt_info.to_other_die) count++;
         return count;

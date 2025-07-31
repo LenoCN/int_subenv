@@ -87,7 +87,7 @@ def test_data_structure():
         'dest_index_ap',
         'dest_index_scp', 
         'dest_index_mcp',
-        'dest_index_imu',
+        'dest_index_accel',
         'dest_index_io',
         'dest_index_other_die'
     ]
@@ -123,7 +123,7 @@ def test_mapping_accuracy():
     assert 'to_ap:1' in psub_line, "AP路由标志不正确"
     assert 'to_scp:1' in psub_line, "SCP路由标志不正确"
     assert 'to_mcp:1' in psub_line, "MCP路由标志不正确"
-    assert 'to_imu:0' in psub_line, "IMU路由标志不正确"
+    assert 'to_accel:0' in psub_line, "IMU路由标志不正确"
     
     print("✓ psub_normal3_intr映射验证通过:")
     print(f"  - 组: PSUB")

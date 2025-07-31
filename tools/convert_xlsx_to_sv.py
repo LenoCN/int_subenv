@@ -50,7 +50,7 @@ DEST_SHEET_MAP = {
     'AP': 'iosub-to-AP中断列表',
     'SCP': 'SCP M7中断列表', 
     'MCP': 'MCP M7中断列表',
-    'IMU': 'iosub-to-IMU中断列表',
+    'ACCEL': 'iosub-to-IMU中断列表',
     'IO': 'iosub-to-IO',
     'OTHER_DIE': '跨die中断列表'
 }
@@ -73,7 +73,7 @@ class InterruptInfo:
         """Convert to SystemVerilog entry format."""
         # Build destination fields
         dest_fields = []
-        for dest in ['AP', 'SCP', 'MCP', 'IMU', 'IO', 'OTHER_DIE']:
+        for dest in ['AP', 'SCP', 'MCP', 'ACCEL', 'IO', 'OTHER_DIE']:
             if dest in self.destinations:
                 dest_index, signal_path = self.destinations[dest]
                 dest_fields.extend([
@@ -156,7 +156,7 @@ def parse_main_sheet(df: pd.DataFrame) -> Dict[str, InterruptInfo]:
 
             # Check routing destinations
             for dest_col, dest_name in [('to AP?', 'AP'), ('to SCP?', 'SCP'), ('to MCP?', 'MCP'),
-                                       ('to IMU?', 'IMU'), ('to IO?', 'IO'), ('to other DIE?', 'OTHER_DIE')]:
+                                       ('to ACCEL?', 'ACCEL'), ('to IO?', 'IO'), ('to other DIE?', 'OTHER_DIE')]:
                 if pd.notna(row[dest_col]) and ('Y' in str(row[dest_col]).upper() or 'P' in str(row[dest_col]).upper()):
                     interrupt_info.add_destination(dest_name, -1)  # Will be filled later
 
@@ -208,7 +208,7 @@ def parse_mscp_sheet(df: pd.DataFrame) -> Dict[str, InterruptInfo]:
 
             # Check routing destinations
             for dest_col, dest_name in [('to AP?', 'AP'), ('to SCP?', 'SCP'), ('to MCP?', 'MCP'),
-                                       ('to IMU?', 'IMU'), ('to IO?', 'IO')]:
+                                       ('to ACCEL?', 'ACCEL'), ('to IO?', 'IO')]:
                 if pd.notna(row[dest_col]) and ('Y' in str(row[dest_col]).upper() or 'P' in str(row[dest_col]).upper()):
                     interrupt_info.add_destination(dest_name, -1)  # Will be filled later
 

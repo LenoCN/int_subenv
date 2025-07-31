@@ -19,7 +19,7 @@ UVM_INFO: 📋 This means all destinations are either not routed or masked by re
 ```
 UVM_INFO: ✅ Found 1 expected destinations after mask filtering:
 UVM_INFO:   - SCP
-UVM_INFO: 📊 Final masked interrupt routing: AP=0, SCP=1, MCP=0, IMU=0, IO=0, OTHER_DIE=0
+UVM_INFO: 📊 Final masked interrupt routing: AP=0, SCP=1, MCP=0, ACCEL=0, IO=0, OTHER_DIE=0
 ```
 
 ## 🔍 调试步骤
@@ -36,7 +36,7 @@ UVM_INFO: 📊 Final masked interrupt routing: AP=0, SCP=1, MCP=0, IMU=0, IO=0, 
 
 #### 1. 查看原始路由配置
 ```
-UVM_INFO [int_lightweight_sequence] 📊 Original interrupt routing: AP=1, SCP=0, MCP=0, IMU=0, IO=0, OTHER_DIE=0
+UVM_INFO [int_lightweight_sequence] 📊 Original interrupt routing: AP=1, SCP=0, MCP=0, ACCEL=0, IO=0, OTHER_DIE=0
 ```
 **含义**: 显示中断的基础路由配置，这里`iosub_slv_err_intr`原本只路由到AP。
 
@@ -149,7 +149,7 @@ UVM_INFO [INT_REG_MODEL] ⚠️ No cached mask value for addr=0x50020100, using 
 ```
 UVM_INFO [INT_REG_MODEL] ❌ Unknown destination 'INVALID' for interrupt 'test_intr'
 ```
-**解决**: 使用正确的目标名称(AP/SCP/MCP/IMU/IO/OTHER_DIE)。
+**解决**: 使用正确的目标名称(AP/SCP/MCP/ACCEL/IO/OTHER_DIE)。
 
 ## 📊 调试信息级别
 

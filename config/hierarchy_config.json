@@ -256,7 +256,7 @@
       "hierarchy_path": "top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.u0_iosub_top_wrap_hd.u0_iosub_top_wrap_raw.u_iosub_int_sub",
       "max_index": 223
     },
-    "imu": {
+    "accel": {
       "signal": "iosub_accel_peri_intr",
       "max_index": 31
     },

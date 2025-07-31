@@ -312,7 +312,7 @@ class int_routing_model extends uvm_object;
             "AP": routing_enabled = info.to_ap;
             "SCP": routing_enabled = info.to_scp;
             "MCP": routing_enabled = info.to_mcp;
-            "IMU": routing_enabled = info.to_imu;
+            "ACCEL": routing_enabled = info.to_accel;
             "IO": routing_enabled = info.to_io;
             "OTHER_DIE": routing_enabled = info.to_other_die;
             default: routing_enabled = 0;
@@ -342,7 +342,7 @@ class int_routing_model extends uvm_object;
 
     // Function to get all expected destinations for an interrupt considering masks
     function void get_expected_destinations_with_mask(string interrupt_name, ref string destinations[$], int_register_model register_model);
-        string all_destinations[$] = {"AP", "SCP", "MCP", "IMU", "IO", "OTHER_DIE"};
+        string all_destinations[$] = {"AP", "SCP", "MCP", "ACCEL", "IO", "OTHER_DIE"};
 
         `uvm_info("INT_ROUTING_MODEL", $sformatf("🎯 Getting expected destinations with mask for interrupt: %s", interrupt_name), UVM_HIGH)
 
@@ -394,11 +394,11 @@ class int_routing_model extends uvm_object;
         end
 
         `uvm_info("INT_ROUTING_MODEL", $sformatf("=== Routing Prediction for '%s' ===", interrupt_name), UVM_MEDIUM)
-        `uvm_info("INT_ROUTING_MODEL", $sformatf("Base routing: AP=%b, SCP=%b, MCP=%b, IMU=%b, IO=%b, OTHER_DIE=%b",
-                  info.to_ap, info.to_scp, info.to_mcp, info.to_imu, info.to_io, info.to_other_die), UVM_MEDIUM)
+        `uvm_info("INT_ROUTING_MODEL", $sformatf("Base routing: AP=%b, SCP=%b, MCP=%b, ACCEL=%b, IO=%b, OTHER_DIE=%b",
+                  info.to_ap, info.to_scp, info.to_mcp, info.to_accel, info.to_io, info.to_other_die), UVM_MEDIUM)
 
         // Check each destination with mask consideration
-        all_destinations[$] = {"AP", "SCP", "MCP", "IMU", "IO", "OTHER_DIE", "ACCEL", "PSUB", "PCIE1", "CSUB"};
+        all_destinations[$] = {"AP", "SCP", "MCP", "ACCEL", "IO", "OTHER_DIE", "PSUB", "PCIE1", "CSUB"};
         foreach (all_destinations[i]) begin
             bit routing_enabled = predict_interrupt_routing_with_mask(interrupt_name, all_destinations[i], register_model);
             bit mask_status = !register_model.is_interrupt_masked(interrupt_name, all_destinations[i], this);
@@ -407,10 +407,9 @@ class int_routing_model extends uvm_object;
                 "AP": base_routing = info.to_ap;
                 "SCP": base_routing = info.to_scp;
                 "MCP": base_routing = info.to_mcp;
-                "IMU": base_routing = info.to_imu;
+                "ACCEL": base_routing = info.to_accel;
                 "IO": base_routing = info.to_io;
                 "OTHER_DIE": base_routing = info.to_other_die;
-                "ACCEL": base_routing = info.to_imu; // ACCEL uses IMU routing
                 "PSUB": base_routing = (info.group == PSUB); // PSUB interrupts route to PSUB
                 "PCIE1": base_routing = (info.group == PCIE1); // PCIE1 interrupts route to PCIE1
                 "CSUB": base_routing = (info.group == CSUB); // CSUB interrupts route to CSUB

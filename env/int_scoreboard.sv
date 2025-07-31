@@ -90,7 +90,7 @@ class int_scoreboard extends uvm_scoreboard;
             `uvm_info(get_type_name(), $sformatf("Expected key format: %s", expected_key), UVM_MEDIUM)
             `uvm_info(get_type_name(), $sformatf("Interrupt routing configuration for %s:", t.interrupt_info.name), UVM_MEDIUM)
             `uvm_info(get_type_name(), $sformatf("  - to_ap: %0d, to_scp: %0d, to_mcp: %0d", t.interrupt_info.to_ap, t.interrupt_info.to_scp, t.interrupt_info.to_mcp), UVM_MEDIUM)
-            `uvm_info(get_type_name(), $sformatf("  - to_imu: %0d, to_io: %0d, to_other_die: %0d", t.interrupt_info.to_imu, t.interrupt_info.to_io, t.interrupt_info.to_other_die), UVM_MEDIUM)
+            `uvm_info(get_type_name(), $sformatf("  - to_accel: %0d, to_io: %0d, to_other_die: %0d", t.interrupt_info.to_accel, t.interrupt_info.to_io, t.interrupt_info.to_other_die), UVM_MEDIUM)
 
             if (expected_interrupts.size() > 0) begin
                 `uvm_info(get_type_name(), "All expected interrupts in queue:", UVM_MEDIUM)
@@ -129,7 +129,7 @@ class int_scoreboard extends uvm_scoreboard;
         `uvm_info(get_type_name(), $sformatf("  - to_ap: %0d", info.to_ap), UVM_MEDIUM)
         `uvm_info(get_type_name(), $sformatf("  - to_scp: %0d", info.to_scp), UVM_MEDIUM)
         `uvm_info(get_type_name(), $sformatf("  - to_mcp: %0d", info.to_mcp), UVM_MEDIUM)
-        `uvm_info(get_type_name(), $sformatf("  - to_imu: %0d", info.to_imu), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("  - to_accel: %0d", info.to_accel), UVM_MEDIUM)
         `uvm_info(get_type_name(), $sformatf("  - to_io: %0d", info.to_io), UVM_MEDIUM)
         `uvm_info(get_type_name(), $sformatf("  - to_other_die: %0d", info.to_other_die), UVM_MEDIUM)
 
@@ -148,10 +148,10 @@ class int_scoreboard extends uvm_scoreboard;
             expected_count++;
             `uvm_info(get_type_name(), $sformatf("  ✅ Added expected: %s@MCP", info.name), UVM_MEDIUM)
         end
-        if (info.to_imu) begin
-            expected_interrupts.push_back($sformatf("%s@%s", info.name, "IMU"));
+        if (info.to_accel) begin
+            expected_interrupts.push_back($sformatf("%s@%s", info.name, "ACCEL"));
             expected_count++;
-            `uvm_info(get_type_name(), $sformatf("  ✅ Added expected: %s@IMU", info.name), UVM_MEDIUM)
+            `uvm_info(get_type_name(), $sformatf("  ✅ Added expected: %s@ACCEL", info.name), UVM_MEDIUM)
         end
         if (info.to_io) begin
             expected_interrupts.push_back($sformatf("%s@%s", info.name, "IO"));

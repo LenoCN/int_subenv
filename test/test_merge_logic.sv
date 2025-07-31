@@ -50,9 +50,9 @@ module test_merge_logic;
         end
         $display("✓ Found merge interrupt info: %s (index: %0d, group: %s)", 
                 merge_info.name, merge_info.index, merge_info.group.name());
-        $display("  Routes to: AP=%0d, SCP=%0d, MCP=%0d, IMU=%0d, IO=%0d, OTHER_DIE=%0d",
+        $display("  Routes to: AP=%0d, SCP=%0d, MCP=%0d, ACCEL=%0d, IO=%0d, OTHER_DIE=%0d",
                 merge_info.to_ap, merge_info.to_scp, merge_info.to_mcp, 
-                merge_info.to_imu, merge_info.to_io, merge_info.to_other_die);
+                merge_info.to_accel, merge_info.to_io, merge_info.to_other_die);
         
         // Get source interrupts
         num_sources = int_routing_model::get_merge_sources(merge_name, sources);

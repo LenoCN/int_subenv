@@ -41,7 +41,7 @@ def parse_mscp_sheet(file_path: str):
                 'to_ap': str(row['to AP?']).upper() == 'YES',
                 'to_scp': str(row['to SCP?']).upper() == 'YES', 
                 'to_mcp': str(row['to MCP?']).upper() == 'YES',
-                'to_imu': str(row['to IMU?']).upper() == 'YES',
+                'to_accel': str(row['to ACCEL?']).upper() == 'YES',
                 'to_io': str(row['to IO?']).upper() == 'YES'
             }
             
@@ -132,8 +132,8 @@ def validate_consistency(excel_file: str, main_file: str):
             routing_issues.append('SCP')
         if mscp_info['routing']['to_mcp'] != (main_info.get('to_mcp', '0') == '1'):
             routing_issues.append('MCP')
-        if mscp_info['routing']['to_imu'] != (main_info.get('to_imu', '0') == '1'):
-            routing_issues.append('IMU')
+        if mscp_info['routing']['to_accel'] != (main_info.get('to_accel', '0') == '1'):
+            routing_issues.append('ACCEL')
         if mscp_info['routing']['to_io'] != (main_info.get('to_io', '0') == '1'):
             routing_issues.append('IO')
             
@@ -165,8 +165,8 @@ def validate_consistency(excel_file: str, main_file: str):
             routing_issues.append('SCP')
         if mscp_info['routing']['to_mcp'] != (main_info.get('to_mcp', '0') == '1'):
             routing_issues.append('MCP')
-        if mscp_info['routing']['to_imu'] != (main_info.get('to_imu', '0') == '1'):
-            routing_issues.append('IMU')
+        if mscp_info['routing']['to_accel'] != (main_info.get('to_accel', '0') == '1'):
+            routing_issues.append('ACCEL')
         if mscp_info['routing']['to_io'] != (main_info.get('to_io', '0') == '1'):
             routing_issues.append('IO')
             

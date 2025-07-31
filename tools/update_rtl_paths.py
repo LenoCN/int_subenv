@@ -43,7 +43,7 @@ class RTLPathUpdater:
         
         # Extract destination indices
         dest_indices = {}
-        for dest in ['ap', 'scp', 'mcp', 'imu', 'io', 'other_die']:
+        for dest in ['ap', 'scp', 'mcp', 'accel', 'io', 'other_die']:
             pattern = f'dest_index_{dest}:(-?\d+)'
             match = re.search(pattern, line)
             if match:
@@ -51,7 +51,7 @@ class RTLPathUpdater:
         
         # Extract to_destination flags
         to_flags = {}
-        for dest in ['ap', 'scp', 'mcp', 'imu', 'io', 'other_die']:
+        for dest in ['ap', 'scp', 'mcp', 'accel', 'io', 'other_die']:
             pattern = f'to_{dest}:([01])'
             match = re.search(pattern, line)
             if match:
@@ -92,7 +92,7 @@ class RTLPathUpdater:
         
         # Generate destination paths for monitoring
         dest_paths = {}
-        for dest in ['ap', 'scp', 'mcp', 'imu', 'io', 'other_die']:
+        for dest in ['ap', 'scp', 'mcp', 'accel', 'io', 'other_die']:
             if to_flags.get(dest, 0) == 1 and dest_indices.get(dest, -1) >= 0:
                 # Pass interrupt name to support hierarchy selection for monitoring
                 dest_paths[dest] = self.generator.generate_destination_path(dest, dest_indices[dest], name)
@@ -106,7 +106,7 @@ class RTLPathUpdater:
         line = re.sub(r'rtl_path_src:"[^"]*"', f'rtl_path_src:"{src_path}"', line)
         
         # Update destination paths
-        for dest in ['ap', 'scp', 'mcp', 'imu', 'io', 'other_die']:
+        for dest in ['ap', 'scp', 'mcp', 'accel', 'io', 'other_die']:
             pattern = f'rtl_path_{dest}:"[^"]*"'
             replacement = f'rtl_path_{dest}:"{dest_paths[dest]}"'
             line = re.sub(pattern, replacement, line)
