@@ -229,270 +229,69 @@ class int_register_model extends uvm_object;
         `uvm_info("INT_REG_MODEL", $sformatf("🔍 Checking mask status for interrupt '%s' to destination '%s'",
                   interrupt_name, destination), UVM_HIGH)
 
-        // Special handling for IOSUB normal interrupts (keep existing logic)
-        if (interrupt_name.substr(0, 6) == "iosub_" &&
-            (interrupt_name != "iosub_ras_cri_intr" &&
-             interrupt_name != "iosub_ras_eri_intr" &&
-             interrupt_name != "iosub_ras_fhi_intr" &&
-             interrupt_name != "iosub_abnormal_0_intr" &&
-             interrupt_name != "iosub_abnormal_1_intr" &&
-             interrupt_name != "iosub_slv_err_intr")) begin
+        // Special handling for IOSUB normal interrupts
+        // Check if interrupt belongs to IOSUB group and has index in [0,9] or [15,50] ranges
+        bit is_iosub_normal = 0;
+        foreach (routing_model.interrupt_map[i]) begin
+            if (routing_model.interrupt_map[i].name == interrupt_name) begin
+                if (routing_model.interrupt_map[i].group == IOSUB) begin
+                    int idx = routing_model.interrupt_map[i].index;
+                    if ((idx >= 0 && idx <= 9) || (idx >= 15 && idx <= 50)) begin
+                        is_iosub_normal = 1;
+                        `uvm_info("INT_REG_MODEL", $sformatf("✅ Identified as IOSUB normal interrupt: %s (group=IOSUB, index=%0d)",
+                                  interrupt_name, idx), UVM_HIGH)
+                    end else begin
+                        `uvm_info("INT_REG_MODEL", $sformatf("📋 IOSUB interrupt but not normal range: %s (group=IOSUB, index=%0d)",
+                                  interrupt_name, idx), UVM_HIGH)
+                    end
+                end
+                break;
+            end
+        end
 
-            `uvm_info("INT_REG_MODEL", $sformatf("📋 Processing IOSUB normal interrupt: %s", interrupt_name), UVM_HIGH)
+        if (is_iosub_normal) begin
 
-            // Get interrupt sub_index for IOSUB normal interrupts
-            sub_index = get_interrupt_sub_index(interrupt_name, routing_model);
-            `uvm_info("INT_REG_MODEL", $sformatf("📍 Retrieved sub_index: %0d for interrupt %s", sub_index, interrupt_name), UVM_HIGH)
+            `uvm_info("INT_REG_MODEL", $sformatf("🔗 Processing IOSUB normal interrupt with serial mask: %s", interrupt_name), UVM_HIGH)
 
-            if (sub_index < 0) begin
-                `uvm_info("INT_REG_MODEL", $sformatf("❌ Invalid sub_index (%0d) for interrupt %s, assuming not masked",
-                          sub_index, interrupt_name), UVM_MEDIUM)
-                return 0;
+            // Serial mask processing: Layer 1 (IOSUB Normal) → Layer 2 (SCP/MCP General)
+            bit first_layer_masked = check_iosub_normal_mask_layer(interrupt_name, destination, routing_model);
+
+            if (first_layer_masked) begin
+                `uvm_info("INT_REG_MODEL", $sformatf("🚫 Interrupt '%s' blocked by Layer 1 (IOSUB normal mask)", interrupt_name), UVM_HIGH)
+                return 1; // First layer blocks the interrupt
             end
 
-            case (destination.toupper())
-                "SCP": begin
-                    `uvm_info("INT_REG_MODEL", $sformatf("🎯 Processing SCP destination for IOSUB normal interrupt"), UVM_HIGH)
-                    // IOSUB normal interrupts: 45-bit mask split across 2 registers
-                    if (sub_index >= 0 && sub_index <= 9) begin
-                        reg_bit = sub_index;  // Index 0-9 maps to bit 0-9
-                        `uvm_info("INT_REG_MODEL", $sformatf("📊 Range 0-9: sub_index=%0d → reg_bit=%0d", sub_index, reg_bit), UVM_HIGH)
-                    end else if (sub_index >= 15 && sub_index <= 50) begin
-                        reg_bit = sub_index - 5;  // Index 15-50 maps to bit 10-45
-                        `uvm_info("INT_REG_MODEL", $sformatf("📊 Range 15-50: sub_index=%0d → reg_bit=%0d", sub_index, reg_bit), UVM_HIGH)
-                    end else begin
-                        `uvm_info("INT_REG_MODEL", $sformatf("❌ Invalid sub_index range (%0d) for SCP, assuming masked", sub_index), UVM_MEDIUM)
-                        return 1; // Not in valid range, assume masked
-                    end
+            `uvm_info("INT_REG_MODEL", $sformatf("✅ Layer 1 (IOSUB normal mask) passed for '%s', checking Layer 2...", interrupt_name), UVM_HIGH)
 
-                    if (reg_bit <= 31) begin
-                        addr = ADDR_MASK_IOSUB_TO_SCP_NORMAL_INTR_0;  // [31:0]
-                        bit_index = reg_bit;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using register 0: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end else begin
-                        addr = ADDR_MASK_IOSUB_TO_SCP_NORMAL_INTR_1;  // [45:32]
-                        bit_index = reg_bit - 32;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using register 1: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end
-                end
+            // Layer 2: Check SCP/MCP general mask for 'iosub_normal_intr'
+            // Note: iosub_normal_intr may not have valid dest_index, so we need special handling
+            bit second_layer_masked = 0;
 
-                "MCP": begin
-                    `uvm_info("INT_REG_MODEL", $sformatf("🎯 Processing MCP destination for IOSUB normal interrupt"), UVM_HIGH)
-                    // IOSUB normal interrupts: 45-bit mask split across 2 registers
-                    int reg_bit;
-                    if (sub_index >= 0 && sub_index <= 9) begin
-                        reg_bit = sub_index;  // Index 0-9 maps to bit 0-9
-                        `uvm_info("INT_REG_MODEL", $sformatf("📊 Range 0-9: sub_index=%0d → reg_bit=%0d", sub_index, reg_bit), UVM_HIGH)
-                    end else if (sub_index >= 15 && sub_index <= 50) begin
-                        reg_bit = sub_index - 5;  // Index 15-50 maps to bit 10-45
-                        `uvm_info("INT_REG_MODEL", $sformatf("📊 Range 15-50: sub_index=%0d → reg_bit=%0d", sub_index, reg_bit), UVM_HIGH)
-                    end else begin
-                        `uvm_info("INT_REG_MODEL", $sformatf("❌ Invalid sub_index range (%0d) for MCP, assuming masked", sub_index), UVM_MEDIUM)
-                        return 1; // Not in valid range, assume masked
-                    end
+            // Try to find iosub_normal_intr in the mapping table
+            int normal_intr_dest_index = get_interrupt_dest_index("iosub_normal_intr", destination, routing_model);
 
-                    if (reg_bit <= 31) begin
-                        addr = ADDR_MASK_IOSUB_TO_MCP_NORMAL_INTR_0;  // [31:0]
-                        bit_index = reg_bit;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using register 0: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end else begin
-                        addr = ADDR_MASK_IOSUB_TO_MCP_NORMAL_INTR_1;  // [45:32]
-                        bit_index = reg_bit - 32;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using register 1: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end
-                end
+            if (normal_intr_dest_index >= 0) begin
+                // Found valid dest_index, use normal general mask check
+                second_layer_masked = check_general_mask_layer("iosub_normal_intr", destination, routing_model);
+                `uvm_info("INT_REG_MODEL", $sformatf("🔍 Layer 2: Found iosub_normal_intr with dest_index=%0d", normal_intr_dest_index), UVM_HIGH)
+            end else begin
+                // iosub_normal_intr doesn't have valid dest_index, assume it's not masked at Layer 2
+                `uvm_info("INT_REG_MODEL", $sformatf("⚠️  Layer 2: iosub_normal_intr has no valid dest_index, assuming Layer 2 is not masked"), UVM_MEDIUM)
+                second_layer_masked = 0;
+            end
 
-                default: begin
-                    `uvm_info("INT_REG_MODEL", $sformatf("❌ Unsupported destination '%s' for IOSUB normal interrupt, assuming unmasked", destination), UVM_MEDIUM)
-                    return 0; // Unmasked for other destinations
-                end
-            endcase
+            `uvm_info("INT_REG_MODEL", $sformatf("🔗 Serial mask result for '%s' to '%s': Layer1=%s, Layer2=%s, Final=%s",
+                      interrupt_name, destination,
+                      first_layer_masked ? "BLOCKED" : "PASSED",
+                      second_layer_masked ? "BLOCKED" : "PASSED",
+                      second_layer_masked ? "MASKED" : "ENABLED"), UVM_MEDIUM)
+
+            return second_layer_masked;
         end
         else begin
             `uvm_info("INT_REG_MODEL", $sformatf("📋 Processing general interrupt (non-IOSUB normal): %s", interrupt_name), UVM_HIGH)
-            // For all other interrupts (including IOSUB general interrupts, SCP, MCP groups)
-            // Use dest_index_scp/dest_index_mcp which corresponds to cpu_irq signal index
-            dest_index = get_interrupt_dest_index(interrupt_name, destination, routing_model);
-            `uvm_info("INT_REG_MODEL", $sformatf("📍 Retrieved dest_index: %0d for interrupt %s to %s", dest_index, interrupt_name, destination), UVM_HIGH)
-
-            if (dest_index < 0) begin
-                `uvm_info("INT_REG_MODEL", $sformatf("❌ Invalid dest_index (%0d) for interrupt %s to %s, assuming not masked",
-                          dest_index, interrupt_name, destination), UVM_MEDIUM)
-                // Unknown interrupt or destination not supported, assume not masked
-                return 0;
-            end
-
-            case (destination.toupper())
-                "SCP": begin
-                    `uvm_info("INT_REG_MODEL", $sformatf("🎯 Processing SCP destination for general interrupt"), UVM_HIGH)
-                    // SCP: dest_index_scp maps to cpu_irq[109-239]
-                    // mask bit 0-130 corresponds to cpu_irq[109-239]
-                    // So mask_bit = dest_index_scp - 109
-                    if (dest_index < 109 || dest_index > 239) begin
-                        `uvm_info("INT_REG_MODEL", $sformatf("❌ dest_index (%0d) out of valid SCP cpu_irq range [109-239], assuming masked", dest_index), UVM_MEDIUM)
-                        return 1; // Out of valid cpu_irq range, assume masked
-                    end
-
-                    mask_bit = dest_index - 109;  // Convert cpu_irq index to mask bit position
-                    `uvm_info("INT_REG_MODEL", $sformatf("📊 SCP mapping: dest_index=%0d → mask_bit=%0d", dest_index, mask_bit), UVM_HIGH)
-
-                    // Map mask bit to register and bit position
-                    if (mask_bit <= 31) begin
-                        addr = ADDR_MASK_IOSUB_TO_SCP_INTR_0;  // [31:0]
-                        bit_index = mask_bit;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using SCP register 0: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end else if (mask_bit <= 63) begin
-                        addr = ADDR_MASK_IOSUB_TO_SCP_INTR_1;  // [63:32]
-                        bit_index = mask_bit - 32;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using SCP register 1: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end else if (mask_bit <= 95) begin
-                        addr = ADDR_MASK_IOSUB_TO_SCP_INTR_2;  // [95:64]
-                        bit_index = mask_bit - 64;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using SCP register 2: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end else if (mask_bit <= 127) begin
-                        addr = ADDR_MASK_IOSUB_TO_SCP_INTR_3;  // [127:96]
-                        bit_index = mask_bit - 96;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using SCP register 3: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end else if (mask_bit <= 130) begin
-                        addr = ADDR_MASK_IOSUB_TO_SCP_INTR_4;  // [130:128]
-                        bit_index = mask_bit - 128;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using SCP register 4: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end else begin
-                        `uvm_info("INT_REG_MODEL", $sformatf("❌ mask_bit (%0d) out of SCP mask range [0-130], assuming masked", mask_bit), UVM_MEDIUM)
-                        return 1; // Out of mask range, assume masked
-                    end
-                end
-
-                "MCP": begin
-                    `uvm_info("INT_REG_MODEL", $sformatf("🎯 Processing MCP destination for general interrupt"), UVM_HIGH)
-                    // MCP: dest_index_mcp maps to cpu_irq[64-209]
-                    // mask bit 0-145 corresponds to cpu_irq[64-209]
-                    // So mask_bit = dest_index_mcp - 64
-                    int mask_bit;
-                    if (dest_index < 64 || dest_index > 209) begin
-                        `uvm_info("INT_REG_MODEL", $sformatf("❌ dest_index (%0d) out of valid MCP cpu_irq range [64-209], assuming masked", dest_index), UVM_MEDIUM)
-                        return 1; // Out of valid cpu_irq range, assume masked
-                    end
-
-                    mask_bit = dest_index - 64;  // Convert cpu_irq index to mask bit position
-                    `uvm_info("INT_REG_MODEL", $sformatf("📊 MCP mapping: dest_index=%0d → mask_bit=%0d", dest_index, mask_bit), UVM_HIGH)
-
-                    // Map mask bit to register and bit position
-                    if (mask_bit <= 31) begin
-                        addr = ADDR_MASK_IOSUB_TO_MCP_INTR_0;  // [31:0]
-                        bit_index = mask_bit;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using MCP register 0: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end else if (mask_bit <= 63) begin
-                        addr = ADDR_MASK_IOSUB_TO_MCP_INTR_1;  // [63:32]
-                        bit_index = mask_bit - 32;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using MCP register 1: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end else if (mask_bit <= 95) begin
-                        addr = ADDR_MASK_IOSUB_TO_MCP_INTR_2;  // [95:64]
-                        bit_index = mask_bit - 64;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using MCP register 2: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end else if (mask_bit <= 127) begin
-                        addr = ADDR_MASK_IOSUB_TO_MCP_INTR_3;  // [127:96]
-                        bit_index = mask_bit - 96;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using MCP register 3: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end else if (mask_bit <= 145) begin
-                        addr = ADDR_MASK_IOSUB_TO_MCP_INTR_4;  // [145:128]
-                        bit_index = mask_bit - 128;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using MCP register 4: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end else begin
-                        `uvm_info("INT_REG_MODEL", $sformatf("❌ mask_bit (%0d) out of MCP mask range [0-145], assuming masked", mask_bit), UVM_MEDIUM)
-                        return 1; // Out of mask range, assume masked
-                    end
-                end
-
-                "ACCEL": begin
-                    `uvm_info("INT_REG_MODEL", $sformatf("🎯 Processing ACCEL destination"), UVM_HIGH)
-                    // Get dest_index for ACCEL destination (using IMU routing)
-                    dest_index = get_interrupt_dest_index(interrupt_name, destination, routing_model);
-                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Retrieved dest_index: %0d for ACCEL destination", dest_index), UVM_HIGH)
-
-                    if (dest_index < 0) begin
-                        `uvm_info("INT_REG_MODEL", $sformatf("❌ Invalid dest_index (%0d) for ACCEL, assuming not masked", dest_index), UVM_MEDIUM)
-                        return 0; // Invalid index, assume not masked
-                    end
-
-                    // ACCEL uses a single 32-bit mask register
-                    if (dest_index <= 31) begin
-                        addr = ADDR_MASK_IOSUB_TO_ACCEL_INTR_0;  // [31:0]
-                        bit_index = dest_index;
-                        `uvm_info("INT_REG_MODEL", $sformatf("📍 Using ACCEL register: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                    end else begin
-                        `uvm_info("INT_REG_MODEL", $sformatf("❌ dest_index (%0d) out of ACCEL mask range [0-31], assuming masked", dest_index), UVM_MEDIUM)
-                        return 1; // Out of mask range, assume masked
-                    end
-                end
-
-                "PSUB": begin
-                    `uvm_info("INT_REG_MODEL", $sformatf("🎯 Processing PSUB destination"), UVM_HIGH)
-                    // PSUB interrupts use sub_index for mask mapping
-                    sub_index = get_interrupt_sub_index(interrupt_name, routing_model);
-                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Retrieved sub_index: %0d for PSUB", sub_index), UVM_HIGH)
-
-                    if (sub_index < 0 || sub_index > 19) begin
-                        `uvm_info("INT_REG_MODEL", $sformatf("❌ Invalid sub_index (%0d) for PSUB, assuming not masked", sub_index), UVM_MEDIUM)
-                        return 0; // Invalid index, assume not masked
-                    end
-
-                    addr = ADDR_MASK_PSUB_TO_IOSUB_INTR;  // [19:0]
-                    bit_index = sub_index;
-                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Using PSUB register: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                end
-
-                "PCIE1": begin
-                    `uvm_info("INT_REG_MODEL", $sformatf("🎯 Processing PCIE1 destination"), UVM_HIGH)
-                    // PCIE1 interrupts use sub_index for mask mapping
-                    sub_index = get_interrupt_sub_index(interrupt_name, routing_model);
-                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Retrieved sub_index: %0d for PCIE1", sub_index), UVM_HIGH)
-
-                    if (sub_index < 0 || sub_index > 19) begin
-                        `uvm_info("INT_REG_MODEL", $sformatf("❌ Invalid sub_index (%0d) for PCIE1, assuming not masked", sub_index), UVM_MEDIUM)
-                        return 0; // Invalid index, assume not masked
-                    end
-
-                    addr = ADDR_MASK_PCIE1_TO_IOSUB_INTR;  // [19:0]
-                    bit_index = sub_index;
-                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Using PCIE1 register: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
-                end
-
-                "CSUB": begin
-                    `uvm_info("INT_REG_MODEL", $sformatf("🎯 Processing CSUB destination - using existing SCP/MCP mask logic"), UVM_HIGH)
-                    // CSUB interrupts route to SCP/MCP and use their mask registers
-                    // This will be handled by the existing SCP/MCP logic above
-                    return 0; // CSUB interrupts use SCP/MCP mask logic, not separate CSUB masks
-                end
-
-                default: begin
-                    // For other destinations, check specific interrupt types
-                    case (interrupt_name)
-                        // PLL merge interrupts
-                        "merge_pll_intr_lock": begin
-                            addr = ADDR_MASK_PLL_INTR_0;
-                            bit_index = 0;
-                        end
-                        "merge_pll_intr_unlock": begin
-                            addr = ADDR_MASK_PLL_INTR_1;
-                            bit_index = 0;
-                        end
-                        "merge_pll_intr_frechangedone": begin
-                            addr = ADDR_MASK_PLL_INTR_2;
-                            bit_index = 0;
-                        end
-                        "merge_pll_intr_frechange_tot_done": begin
-                            addr = ADDR_MASK_PLL_INTR_3;
-                            bit_index = 0;
-                        end
-                        "merge_pll_intr_intdocfrac_err": begin
-                            addr = ADDR_MASK_PLL_INTR_4;
-                            bit_index = 0;
-                        end
-                        default: return 0; // Unmasked for other destinations
-                    endcase
-                end
-            endcase
+            // For all other interrupts, directly use general mask check to avoid code duplication
+            return check_general_mask_layer(interrupt_name, destination, routing_model);
         end
 
         // Get mask value from cache if available, otherwise assume enabled
@@ -676,6 +475,222 @@ class int_register_model extends uvm_object;
         end
         `uvm_info("INT_REG_MODEL", $sformatf("❌ Interrupt '%s' not found or destination '%s' not supported", interrupt_name, destination), UVM_MEDIUM)
         return -1; // Not found or destination not supported
+    endfunction
+
+    // Check IOSUB normal mask layer (Layer 1 of serial mask processing)
+    function bit check_iosub_normal_mask_layer(string interrupt_name, string destination, int_routing_model routing_model);
+        logic [31:0] mask_value;
+        logic [31:0] addr;
+        int bit_index;
+        int sub_index;
+        int reg_bit;
+        bit result;
+
+        `uvm_info("INT_REG_MODEL", $sformatf("🔍 Layer 1: Checking IOSUB normal mask for '%s' to '%s'", interrupt_name, destination), UVM_HIGH)
+
+        // Get interrupt sub_index for IOSUB normal interrupts
+        sub_index = get_interrupt_sub_index(interrupt_name, routing_model);
+        `uvm_info("INT_REG_MODEL", $sformatf("📍 Retrieved sub_index: %0d for interrupt %s", sub_index, interrupt_name), UVM_HIGH)
+
+        if (sub_index < 0) begin
+            `uvm_info("INT_REG_MODEL", $sformatf("❌ Invalid sub_index (%0d) for interrupt %s, assuming not masked", sub_index, interrupt_name), UVM_MEDIUM)
+            return 0;
+        end
+
+        case (destination.toupper())
+            "SCP": begin
+                `uvm_info("INT_REG_MODEL", $sformatf("🎯 Layer 1: Processing SCP destination for IOSUB normal interrupt"), UVM_HIGH)
+                // IOSUB normal interrupts: 45-bit mask split across 2 registers
+                if (sub_index >= 0 && sub_index <= 9) begin
+                    reg_bit = sub_index;  // Index 0-9 maps to bit 0-9
+                    `uvm_info("INT_REG_MODEL", $sformatf("📊 Range 0-9: sub_index=%0d → reg_bit=%0d", sub_index, reg_bit), UVM_HIGH)
+                end else if (sub_index >= 15 && sub_index <= 50) begin
+                    reg_bit = sub_index - 5;  // Index 15-50 maps to bit 10-45
+                    `uvm_info("INT_REG_MODEL", $sformatf("📊 Range 15-50: sub_index=%0d → reg_bit=%0d", sub_index, reg_bit), UVM_HIGH)
+                end else begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("❌ Invalid sub_index range (%0d) for SCP, assuming masked", sub_index), UVM_MEDIUM)
+                    return 1; // Not in valid range, assume masked
+                end
+
+                if (reg_bit <= 31) begin
+                    addr = ADDR_MASK_IOSUB_TO_SCP_NORMAL_INTR_0;  // [31:0]
+                    bit_index = reg_bit;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 1: Using register 0: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end else begin
+                    addr = ADDR_MASK_IOSUB_TO_SCP_NORMAL_INTR_1;  // [45:32]
+                    bit_index = reg_bit - 32;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 1: Using register 1: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end
+            end
+
+            "MCP": begin
+                `uvm_info("INT_REG_MODEL", $sformatf("🎯 Layer 1: Processing MCP destination for IOSUB normal interrupt"), UVM_HIGH)
+                // IOSUB normal interrupts: 45-bit mask split across 2 registers
+                if (sub_index >= 0 && sub_index <= 9) begin
+                    reg_bit = sub_index;  // Index 0-9 maps to bit 0-9
+                    `uvm_info("INT_REG_MODEL", $sformatf("📊 Range 0-9: sub_index=%0d → reg_bit=%0d", sub_index, reg_bit), UVM_HIGH)
+                end else if (sub_index >= 15 && sub_index <= 50) begin
+                    reg_bit = sub_index - 5;  // Index 15-50 maps to bit 10-45
+                    `uvm_info("INT_REG_MODEL", $sformatf("📊 Range 15-50: sub_index=%0d → reg_bit=%0d", sub_index, reg_bit), UVM_HIGH)
+                end else begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("❌ Invalid sub_index range (%0d) for MCP, assuming masked", sub_index), UVM_MEDIUM)
+                    return 1; // Not in valid range, assume masked
+                end
+
+                if (reg_bit <= 31) begin
+                    addr = ADDR_MASK_IOSUB_TO_MCP_NORMAL_INTR_0;  // [31:0]
+                    bit_index = reg_bit;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 1: Using register 0: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end else begin
+                    addr = ADDR_MASK_IOSUB_TO_MCP_NORMAL_INTR_1;  // [45:32]
+                    bit_index = reg_bit - 32;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 1: Using register 1: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end
+            end
+
+            default: begin
+                `uvm_info("INT_REG_MODEL", $sformatf("❌ Unsupported destination '%s' for IOSUB normal interrupt Layer 1, assuming unmasked", destination), UVM_MEDIUM)
+                return 0; // Unmasked for other destinations
+            end
+        endcase
+
+        // Get mask value from cache if available, otherwise assume enabled
+        if (current_mask_values.exists(addr)) begin
+            mask_value = current_mask_values[addr];
+            `uvm_info("INT_REG_MODEL", $sformatf("📖 Layer 1: Found cached mask value: addr=0x%08x, value=0x%08x", addr, mask_value), UVM_HIGH)
+        end else begin
+            mask_value = 32'hFFFF_FFFF; // Default to enabled if not cached
+            `uvm_info("INT_REG_MODEL", $sformatf("⚠️  Layer 1: No cached mask value for addr=0x%08x, using default 0x%08x (all enabled)", addr, mask_value), UVM_MEDIUM)
+        end
+
+        // Return 1 if masked (bit is 0), 0 if enabled (bit is 1)
+        result = ~mask_value[bit_index];
+        `uvm_info("INT_REG_MODEL", $sformatf("🔍 Layer 1 result: interrupt='%s', dest='%s', addr=0x%08x, bit_index=%0d, mask_bit=%b, result=%s",
+                  interrupt_name, destination, addr, bit_index, mask_value[bit_index], result ? "BLOCKED" : "PASSED"), UVM_HIGH)
+        return result;
+    endfunction
+
+    // Check general mask layer (Layer 2 of serial mask processing)
+    function bit check_general_mask_layer(string interrupt_name, string destination, int_routing_model routing_model);
+        logic [31:0] mask_value;
+        logic [31:0] addr;
+        int bit_index;
+        int dest_index;
+        int mask_bit;
+        bit result;
+
+        `uvm_info("INT_REG_MODEL", $sformatf("🔍 Layer 2: Checking general mask for '%s' to '%s'", interrupt_name, destination), UVM_HIGH)
+
+        // Get destination index for the interrupt
+        dest_index = get_interrupt_dest_index(interrupt_name, destination, routing_model);
+        `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 2: Retrieved dest_index: %0d for interrupt %s to %s", dest_index, interrupt_name, destination), UVM_HIGH)
+
+        if (dest_index < 0) begin
+            `uvm_info("INT_REG_MODEL", $sformatf("❌ Layer 2: Invalid dest_index (%0d) for interrupt %s to %s, assuming not masked", dest_index, interrupt_name, destination), UVM_MEDIUM)
+            return 0;
+        end
+
+        case (destination.toupper())
+            "SCP": begin
+                `uvm_info("INT_REG_MODEL", $sformatf("🎯 Layer 2: Processing SCP destination for general interrupt"), UVM_HIGH)
+                // SCP: dest_index_scp maps to cpu_irq[109-239]
+                // mask bit 0-130 corresponds to cpu_irq[109-239]
+                // So mask_bit = dest_index_scp - 109
+                if (dest_index < 109 || dest_index > 239) begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("❌ Layer 2: dest_index (%0d) out of valid SCP cpu_irq range [109-239], assuming masked", dest_index), UVM_MEDIUM)
+                    return 1; // Out of valid cpu_irq range, assume masked
+                end
+
+                mask_bit = dest_index - 109;  // Convert cpu_irq index to mask bit position
+                `uvm_info("INT_REG_MODEL", $sformatf("📊 Layer 2: SCP mapping: dest_index=%0d → mask_bit=%0d", dest_index, mask_bit), UVM_HIGH)
+
+                // Map mask bit to register and bit position
+                if (mask_bit <= 31) begin
+                    addr = ADDR_MASK_IOSUB_TO_SCP_INTR_0;  // [31:0]
+                    bit_index = mask_bit;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 2: Using SCP register 0: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end else if (mask_bit <= 63) begin
+                    addr = ADDR_MASK_IOSUB_TO_SCP_INTR_1;  // [63:32]
+                    bit_index = mask_bit - 32;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 2: Using SCP register 1: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end else if (mask_bit <= 95) begin
+                    addr = ADDR_MASK_IOSUB_TO_SCP_INTR_2;  // [95:64]
+                    bit_index = mask_bit - 64;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 2: Using SCP register 2: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end else if (mask_bit <= 127) begin
+                    addr = ADDR_MASK_IOSUB_TO_SCP_INTR_3;  // [127:96]
+                    bit_index = mask_bit - 96;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 2: Using SCP register 3: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end else if (mask_bit <= 130) begin
+                    addr = ADDR_MASK_IOSUB_TO_SCP_INTR_4;  // [130:128]
+                    bit_index = mask_bit - 128;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 2: Using SCP register 4: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end else begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("❌ Layer 2: mask_bit (%0d) out of SCP mask range [0-130], assuming masked", mask_bit), UVM_MEDIUM)
+                    return 1; // Out of mask range, assume masked
+                end
+            end
+
+            "MCP": begin
+                `uvm_info("INT_REG_MODEL", $sformatf("🎯 Layer 2: Processing MCP destination for general interrupt"), UVM_HIGH)
+                // MCP: dest_index_mcp maps to cpu_irq[64-209]
+                // mask bit 0-145 corresponds to cpu_irq[64-209]
+                // So mask_bit = dest_index_mcp - 64
+                if (dest_index < 64 || dest_index > 209) begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("❌ Layer 2: dest_index (%0d) out of valid MCP cpu_irq range [64-209], assuming masked", dest_index), UVM_MEDIUM)
+                    return 1; // Out of valid cpu_irq range, assume masked
+                end
+
+                mask_bit = dest_index - 64;  // Convert cpu_irq index to mask bit position
+                `uvm_info("INT_REG_MODEL", $sformatf("📊 Layer 2: MCP mapping: dest_index=%0d → mask_bit=%0d", dest_index, mask_bit), UVM_HIGH)
+
+                // Map mask bit to register and bit position
+                if (mask_bit <= 31) begin
+                    addr = ADDR_MASK_IOSUB_TO_MCP_INTR_0;  // [31:0]
+                    bit_index = mask_bit;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 2: Using MCP register 0: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end else if (mask_bit <= 63) begin
+                    addr = ADDR_MASK_IOSUB_TO_MCP_INTR_1;  // [63:32]
+                    bit_index = mask_bit - 32;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 2: Using MCP register 1: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end else if (mask_bit <= 95) begin
+                    addr = ADDR_MASK_IOSUB_TO_MCP_INTR_2;  // [95:64]
+                    bit_index = mask_bit - 64;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 2: Using MCP register 2: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end else if (mask_bit <= 127) begin
+                    addr = ADDR_MASK_IOSUB_TO_MCP_INTR_3;  // [127:96]
+                    bit_index = mask_bit - 96;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 2: Using MCP register 3: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end else if (mask_bit <= 145) begin
+                    addr = ADDR_MASK_IOSUB_TO_MCP_INTR_4;  // [145:128]
+                    bit_index = mask_bit - 128;
+                    `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 2: Using MCP register 4: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
+                end else begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("❌ Layer 2: mask_bit (%0d) out of MCP mask range [0-145], assuming masked", mask_bit), UVM_MEDIUM)
+                    return 1; // Out of mask range, assume masked
+                end
+            end
+
+            default: begin
+                `uvm_info("INT_REG_MODEL", $sformatf("❌ Layer 2: Unsupported destination '%s', assuming unmasked", destination), UVM_MEDIUM)
+                return 0; // Unmasked for other destinations
+            end
+        endcase
+
+        // Get mask value from cache if available, otherwise assume enabled
+        if (current_mask_values.exists(addr)) begin
+            mask_value = current_mask_values[addr];
+            `uvm_info("INT_REG_MODEL", $sformatf("📖 Layer 2: Found cached mask value: addr=0x%08x, value=0x%08x", addr, mask_value), UVM_HIGH)
+        end else begin
+            mask_value = 32'hFFFF_FFFF; // Default to enabled if not cached
+            `uvm_info("INT_REG_MODEL", $sformatf("⚠️  Layer 2: No cached mask value for addr=0x%08x, using default 0x%08x (all enabled)", addr, mask_value), UVM_MEDIUM)
+        end
+
+        // Return 1 if masked (bit is 0), 0 if enabled (bit is 1)
+        result = ~mask_value[bit_index];
+        `uvm_info("INT_REG_MODEL", $sformatf("🔍 Layer 2 result: interrupt='%s', dest='%s', addr=0x%08x, bit_index=%0d, mask_bit=%b, result=%s",
+                  interrupt_name, destination, addr, bit_index, mask_value[bit_index], result ? "BLOCKED" : "PASSED"), UVM_HIGH)
+        return result;
     endfunction
 
 endclass
