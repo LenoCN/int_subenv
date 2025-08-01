@@ -130,8 +130,8 @@ class int_lightweight_sequence extends int_base_sequence;
         finish_item(stim_item);
 
         `uvm_info(get_type_name(), $sformatf("Waiting for detection of interrupt: %s", info.name), UVM_HIGH)
-        // Wait for interrupt to be detected by monitor using proper UVM approach
-        wait_for_interrupt_detection(info);
+        // Wait for interrupt to be detected by monitor using mask-aware approach for consistency
+        wait_for_interrupt_detection_with_mask(info);
 
         // Update status register to reflect interrupt occurrence
         m_routing_model.update_interrupt_status(info.name, 1, m_register_model);
@@ -227,7 +227,7 @@ class int_lightweight_sequence extends int_base_sequence;
 
         // Wait for merge interrupt to be detected
         `uvm_info(get_type_name(), $sformatf("Waiting for detection of merge interrupt: %s", merge_info.name), UVM_HIGH)
-        wait_for_interrupt_detection(merge_info);
+        wait_for_interrupt_detection_with_mask(merge_info);
 
         // Update status register to reflect merge interrupt occurrence
         m_routing_model.update_interrupt_status(merge_info.name, 1, m_register_model);
@@ -303,7 +303,7 @@ class int_lightweight_sequence extends int_base_sequence;
         // Wait for merge interrupt to be detected
         `uvm_info(get_type_name(), $sformatf("Waiting for detection of merge interrupt: %s from multiple sources",
                  merge_info.name), UVM_HIGH)
-        wait_for_interrupt_detection(merge_info);
+        wait_for_interrupt_detection_with_mask(merge_info);
 
         // Update status register to reflect merge interrupt occurrence
         m_routing_model.update_interrupt_status(merge_info.name, 1, m_register_model);
