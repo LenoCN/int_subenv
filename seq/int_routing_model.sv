@@ -169,35 +169,27 @@ class int_routing_model extends uvm_object;
             end
 
             "iosub_ras_cri_intr": begin
-                // Collect all interrupts that should be merged into iosub_ras_cri_intr
+                // Collect only SMMU interrupts that should be merged into iosub_ras_cri_intr
                 foreach (interrupt_map[i]) begin
-                    if (interrupt_map[i].name == "smmu_cri_intr" ||
-                        interrupt_map[i].name == "scp_ras_cri_intr" ||
-                        interrupt_map[i].name == "mcp_ras_cri_intr") begin
+                    if (interrupt_map[i].name == "smmu_cri_intr") begin
                         sources.push_back(interrupt_map[i]);
                     end
                 end
             end
 
             "iosub_ras_eri_intr": begin
-                // Collect all interrupts that should be merged into iosub_ras_eri_intr
+                // Collect only SMMU interrupts that should be merged into iosub_ras_eri_intr
                 foreach (interrupt_map[i]) begin
-                    if (interrupt_map[i].name == "smmu_eri_intr" ||
-                        interrupt_map[i].name == "scp_ras_eri_intr" ||
-                        interrupt_map[i].name == "mcp_ras_eri_intr") begin
+                    if (interrupt_map[i].name == "smmu_eri_intr") begin
                         sources.push_back(interrupt_map[i]);
                     end
                 end
             end
 
             "iosub_ras_fhi_intr": begin
-                // Collect all interrupts that should be merged into iosub_ras_fhi_intr
+                // Collect only SMMU interrupts that should be merged into iosub_ras_fhi_intr
                 foreach (interrupt_map[i]) begin
-                    if (interrupt_map[i].name == "smmu_fhi_intr" ||
-                        interrupt_map[i].name == "scp_ras_fhi_intr" ||
-                        interrupt_map[i].name == "mcp_ras_fhi_intr" ||
-                        interrupt_map[i].name == "iodap_chk_err_etf0" ||
-                        interrupt_map[i].name == "iodap_chk_err_etf1") begin
+                    if (interrupt_map[i].name == "smmu_fhi_intr") begin
                         sources.push_back(interrupt_map[i]);
                     end
                 end
