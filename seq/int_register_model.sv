@@ -251,42 +251,63 @@ class int_register_model extends uvm_object;
 
         if (is_iosub_normal) begin
 
-            `uvm_info("INT_REG_MODEL", $sformatf("🔗 Processing IOSUB normal interrupt with serial mask: %s", interrupt_name), UVM_HIGH)
+            `uvm_info("INT_REG_MODEL", $sformatf("🔗 Processing IOSUB normal interrupt: %s to %s", interrupt_name, destination), UVM_HIGH)
 
-            // Serial mask processing: Layer 1 (IOSUB Normal) → Layer 2 (SCP/MCP General)
-            bit first_layer_masked = check_iosub_normal_mask_layer(interrupt_name, destination, routing_model);
+            // Check destination to determine mask processing strategy
+            case (destination.toupper())
+                "SCP", "MCP": begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("🔗 SCP/MCP destination: Using serial mask processing (Layer 1 + Layer 2)"), UVM_HIGH)
 
-            if (first_layer_masked) begin
-                `uvm_info("INT_REG_MODEL", $sformatf("🚫 Interrupt '%s' blocked by Layer 1 (IOSUB normal mask)", interrupt_name), UVM_HIGH)
-                return 1; // First layer blocks the interrupt
-            end
+                    // Serial mask processing: Layer 1 (IOSUB Normal) → Layer 2 (SCP/MCP General)
+                    bit first_layer_masked = check_iosub_normal_mask_layer(interrupt_name, destination, routing_model);
 
-            `uvm_info("INT_REG_MODEL", $sformatf("✅ Layer 1 (IOSUB normal mask) passed for '%s', checking Layer 2...", interrupt_name), UVM_HIGH)
+                    if (first_layer_masked) begin
+                        `uvm_info("INT_REG_MODEL", $sformatf("🚫 Interrupt '%s' blocked by Layer 1 (IOSUB normal mask)", interrupt_name), UVM_HIGH)
+                        return 1; // First layer blocks the interrupt
+                    end
 
-            // Layer 2: Check SCP/MCP general mask for 'iosub_normal_intr'
-            // Note: iosub_normal_intr may not have valid dest_index, so we need special handling
-            bit second_layer_masked = 0;
+                    `uvm_info("INT_REG_MODEL", $sformatf("✅ Layer 1 (IOSUB normal mask) passed for '%s', checking Layer 2...", interrupt_name), UVM_HIGH)
 
-            // Try to find iosub_normal_intr in the mapping table
-            int normal_intr_dest_index = get_interrupt_dest_index("iosub_normal_intr", destination, routing_model);
+                    // Layer 2: Check SCP/MCP general mask for 'iosub_normal_intr'
+                    // Note: iosub_normal_intr may not have valid dest_index, so we need special handling
+                    bit second_layer_masked = 0;
 
-            if (normal_intr_dest_index >= 0) begin
-                // Found valid dest_index, use normal general mask check
-                second_layer_masked = check_general_mask_layer("iosub_normal_intr", destination, routing_model);
-                `uvm_info("INT_REG_MODEL", $sformatf("🔍 Layer 2: Found iosub_normal_intr with dest_index=%0d", normal_intr_dest_index), UVM_HIGH)
-            end else begin
-                // iosub_normal_intr doesn't have valid dest_index, assume it's not masked at Layer 2
-                `uvm_info("INT_REG_MODEL", $sformatf("⚠️  Layer 2: iosub_normal_intr has no valid dest_index, assuming Layer 2 is not masked"), UVM_MEDIUM)
-                second_layer_masked = 0;
-            end
+                    // Try to find iosub_normal_intr in the mapping table
+                    int normal_intr_dest_index = get_interrupt_dest_index("iosub_normal_intr", destination, routing_model);
 
-            `uvm_info("INT_REG_MODEL", $sformatf("🔗 Serial mask result for '%s' to '%s': Layer1=%s, Layer2=%s, Final=%s",
-                      interrupt_name, destination,
-                      first_layer_masked ? "BLOCKED" : "PASSED",
-                      second_layer_masked ? "BLOCKED" : "PASSED",
-                      second_layer_masked ? "MASKED" : "ENABLED"), UVM_MEDIUM)
+                    if (normal_intr_dest_index >= 0) begin
+                        // Found valid dest_index, use normal general mask check
+                        second_layer_masked = check_general_mask_layer("iosub_normal_intr", destination, routing_model);
+                        `uvm_info("INT_REG_MODEL", $sformatf("🔍 Layer 2: Found iosub_normal_intr with dest_index=%0d", normal_intr_dest_index), UVM_HIGH)
+                    end else begin
+                        // iosub_normal_intr doesn't have valid dest_index, assume it's not masked at Layer 2
+                        `uvm_info("INT_REG_MODEL", $sformatf("⚠️  Layer 2: iosub_normal_intr has no valid dest_index, assuming Layer 2 is not masked"), UVM_MEDIUM)
+                        second_layer_masked = 0;
+                    end
 
-            return second_layer_masked;
+                    `uvm_info("INT_REG_MODEL", $sformatf("🔗 Serial mask result for '%s' to '%s': Layer1=%s, Layer2=%s, Final=%s",
+                              interrupt_name, destination,
+                              first_layer_masked ? "BLOCKED" : "PASSED",
+                              second_layer_masked ? "BLOCKED" : "PASSED",
+                              second_layer_masked ? "MASKED" : "ENABLED"), UVM_MEDIUM)
+
+                    return second_layer_masked;
+                end
+
+                "ACCEL": begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("🎯 ACCEL destination: Using single-layer mask processing (ACCEL mask only)"), UVM_HIGH)
+
+                    // For ACCEL destination, IOSUB normal interrupts only use ACCEL mask (no serial processing)
+                    return check_general_mask_layer(interrupt_name, destination, routing_model);
+                end
+
+                default: begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("📋 Other destination '%s': Using general mask processing", destination), UVM_HIGH)
+
+                    // For other destinations, use general mask processing
+                    return check_general_mask_layer(interrupt_name, destination, routing_model);
+                end
+            endcase
         end
         else begin
             `uvm_info("INT_REG_MODEL", $sformatf("📋 Processing general interrupt (non-IOSUB normal): %s", interrupt_name), UVM_HIGH)
@@ -661,6 +682,21 @@ class int_register_model extends uvm_object;
                     `uvm_info("INT_REG_MODEL", $sformatf("❌ Layer 2: mask_bit (%0d) out of MCP mask range [0-145], assuming masked", mask_bit), UVM_MEDIUM)
                     return 1; // Out of mask range, assume masked
                 end
+            end
+
+            "ACCEL": begin
+                `uvm_info("INT_REG_MODEL", $sformatf("🎯 Layer 2: Processing ACCEL destination for general interrupt"), UVM_HIGH)
+                // ACCEL: dest_index_accel maps directly to mask bit position
+                // ACCEL uses a single 32-bit mask register
+                if (dest_index < 0 || dest_index > 31) begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("❌ Layer 2: dest_index (%0d) out of valid ACCEL mask range [0-31], assuming masked", dest_index), UVM_MEDIUM)
+                    return 1; // Out of valid mask range, assume masked
+                end
+
+                addr = ADDR_MASK_IOSUB_TO_ACCEL_INTR_0;  // [31:0]
+                bit_index = dest_index;  // Direct mapping
+                `uvm_info("INT_REG_MODEL", $sformatf("📊 Layer 2: ACCEL mapping: dest_index=%0d → bit_index=%0d", dest_index, bit_index), UVM_HIGH)
+                `uvm_info("INT_REG_MODEL", $sformatf("📍 Layer 2: Using ACCEL register: addr=0x%08x, bit_index=%0d", addr, bit_index), UVM_HIGH)
             end
 
             default: begin
