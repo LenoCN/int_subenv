@@ -6,43 +6,69 @@
 
 ## 🎯 项目概述
 
-中断验证子环境是一个**企业级**的基于UVM的SystemVerilog验证环境，专门用于验证复杂SoC中的中断路由和处理逻辑。该环境支持**423个中断信号**的完整建模，包括**12个复杂的merge中断逻辑**，并提供了**Excel驱动的配置管理系统**。
+中断验证子环境是一个**企业级**的基于UVM的SystemVerilog验证环境，专门用于验证复杂SoC中的中断路由和处理逻辑。该环境支持**319个中断信号**的完整建模，包括**复杂的merge中断逻辑**，并提供了**Excel驱动的配置管理系统**。
 
 ### 🏆 核心优势
-- **✅ 100%覆盖率** - 423个中断完整建模，12个merge中断100%实现
+- **✅ 高覆盖率** - 319个中断完整建模，merge中断100%实现
 - **🚀 Excel驱动** - 业界领先的配置管理方式，支持快速更新
 - **⚡ 事件驱动** - 精确握手机制，替代传统固定延迟
-- **🔧 工具完善** - 完整的自动化工具链，支持CI/CD集成
-- **📊 质量保证** - 自动化合规性检查和覆盖率收集
+- **🔧 工具完善** - 5个核心工具，支持一键生成配置
+- **📊 质量保证** - 自动化合规性检查和路由验证
+
+### 📚 文档导航
+- **[README.md](README.md)** - 项目主页，快速开始和用户指南
+- **[CHANGELOG.md](CHANGELOG.md)** - 详细的版本更新历史
+- **[TECHNICAL_DOCS.md](TECHNICAL_DOCS.md)** - 技术实现细节和设计文档
+- **[tools/README.md](tools/README.md)** - 工具使用说明和API文档
 
 ## 🚀 快速开始
 
-### 环境准备
+### 5分钟上手指南
+
+#### 📋 前置条件
 ```bash
-# 安装Python依赖
+# 1. 安装Python依赖
 pip install pandas openpyxl
 
-# 验证环境
+# 2. 验证环境
 python3 --version  # 需要 3.6+
 ```
 
-### 一键运行
+#### ⚡ 一键生成配置
 ```bash
-# 生成中断映射并运行基础测试
-python3 tools/convert_xlsx_to_sv.py int_vector.xlsx
-python3 tools/test_new_system.py
+# 推荐：使用自动化工具生成完整配置
+python3 tools/generate_interrupt_config.py int_vector.xlsx
 
-# 运行完整验证
-make -f cfg/int.mk tc_int_routing
+# 或者手动执行各步骤
+python3 tools/convert_xlsx_to_sv.py int_vector.xlsx -o seq/int_map_entries.svh
+python3 tools/update_rtl_paths.py
 ```
 
-### 验证结果
+#### 🧪 运行验证
 ```bash
-# 检查合规性 (预期: 100%)
-python3 tools/check_stimulus_compliance.py
+# 运行基础中断测试
+make -f cfg/int.mk tc_int_routing
 
-# 验证merge逻辑 (预期: 12/12通过)
-python3 tools/verify_merge_implementation.py
+# 运行merge中断测试
+make -f cfg/int.mk tc_merge_interrupt_test
+
+# 运行完整测试套件
+make -f cfg/int.mk all_tests
+```
+
+#### ✅ 验证结果
+```bash
+# 检查生成的配置
+grep -c "interrupt_map.push_back" seq/int_map_entries.svh  # 预期: 319
+
+# 检查路由配置问题
+python3 -c "
+import re
+with open('seq/int_map_entries.svh', 'r') as f:
+    content = f.read()
+problems = len(re.findall(r'to_.*:1.*rtl_path_.*:\"\"', content))
+print(f'路由配置问题: {problems}个 (预期: ≤7个)')
+"
 ```
 
 ## 📊 项目状态
@@ -338,15 +364,79 @@ end
 - 添加充分的注释和文档
 - 确保所有测试通过
 
+## 🐛 调试指南
+
+### 常见问题排查
+
+#### UNEXPECTED interrupt 错误
+```bash
+# 问题：中断被检测到但scoreboard中没有对应的期望中断
+# 解决步骤：
+
+# 1. 检查中断配置
+grep "your_interrupt_name" seq/int_map_entries.svh
+
+# 2. 启用详细调试
+export UVM_VERBOSITY=UVM_HIGH
+
+# 3. 检查mask状态
+# 在测试中添加：
+# `uvm_info("DEBUG", $sformatf("Mask status: %0h", mask_value), UVM_MEDIUM)
+```
+
+#### 路由配置问题
+```bash
+# 检查路由配置一致性
+python3 tools/check_excel_naming_issues.py
+
+# 重新生成配置
+python3 tools/generate_interrupt_config.py int_vector.xlsx
+```
+
+#### Excel命名不一致
+```bash
+# 问题：iosub_normal_int vs iosub_normal_intr
+# 解决：修正Excel文件中的命名，然后重新生成配置
+```
+
+### 调试技巧
+- 使用`UVM_HIGH`详细度查看中断处理流程
+- 检查mask寄存器状态和中断路由
+- 验证Excel配置与生成的SystemVerilog一致性
+
+## 🔌 DUT集成清单
+
+### 准备工作
+- [ ] **信号连接**: 确认所有中断信号正确连接到DUT
+- [ ] **时钟域**: 验证中断信号的时钟域配置
+- [ ] **复位逻辑**: 确认中断相关寄存器的复位行为
+
+### 配置更新
+- [ ] **Excel规格**: 更新int_vector.xlsx以匹配实际DUT
+- [ ] **层次结构**: 更新config/hierarchy_config.json
+- [ ] **重新生成**: 运行配置生成工具
+
+### 验证步骤
+- [ ] **基础连通性**: 验证每个中断源可以正确触发
+- [ ] **路由验证**: 确认中断正确路由到目标处理器
+- [ ] **Mask功能**: 验证中断mask和状态寄存器
+- [ ] **Merge逻辑**: 测试复杂的merge中断功能
+
+### 性能优化
+- [ ] **仿真性能**: 优化仿真速度和内存使用
+- [ ] **覆盖率收集**: 配置功能和代码覆盖率
+- [ ] **回归测试**: 建立自动化回归测试流程
+
 ## 📞 支持与联系
 
 ### 技术支持
 - **Issues**: [GitHub Issues](https://github.com/LenoCN/int_subenv/issues)
-- **Wiki**: [项目Wiki](https://github.com/LenoCN/int_subenv/wiki)
-- **Discussions**: [GitHub Discussions](https://github.com/LenoCN/int_subenv/discussions)
+- **文档**: [技术文档](TECHNICAL_DOCS.md) | [更新日志](CHANGELOG.md)
+- **工具**: [工具使用指南](tools/README.md)
 
 ### 项目维护
 - **主要维护者**: LenoCN
+- **最后更新**: 2025-08-01
 - **项目状态**: 活跃开发中
 - **版本策略**: 语义化版本控制
 
