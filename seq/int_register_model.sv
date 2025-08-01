@@ -471,14 +471,6 @@ class int_register_model extends uvm_object;
                             `uvm_info("INT_REG_MODEL", $sformatf("❌ AP routing disabled for interrupt '%s'", interrupt_name), UVM_HIGH)
                         end
                     end
-                    "ACCEL": begin
-                        if (routing_model.interrupt_map[i].to_accel == 1) begin
-                            `uvm_info("INT_REG_MODEL", $sformatf("📍 ACCEL routing enabled, dest_index_accel=%0d", routing_model.interrupt_map[i].dest_index_accel), UVM_HIGH)
-                            return routing_model.interrupt_map[i].dest_index_accel;
-                        end else begin
-                            `uvm_info("INT_REG_MODEL", $sformatf("❌ ACCEL routing disabled for interrupt '%s'", interrupt_name), UVM_HIGH)
-                        end
-                    end
                     "IO": begin
                         if (routing_model.interrupt_map[i].to_io == 1) begin
                             `uvm_info("INT_REG_MODEL", $sformatf("📍 IO routing enabled, dest_index_io=%0d", routing_model.interrupt_map[i].dest_index_io), UVM_HIGH)

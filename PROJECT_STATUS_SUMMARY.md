@@ -20,6 +20,7 @@
 ✅ **完善ACCEL目标支持** - 在check_general_mask_layer中添加ACCEL路由mask处理
 ✅ **修复目的地特定mask处理** - SCP/MCP使用串行mask，ACCEL使用单层mask，符合硬件架构
 
+
 ## 🎯 核心成就
 
 ### 1. 完整的验证环境架构 ✅
