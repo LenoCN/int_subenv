@@ -721,6 +721,136 @@ class int_register_model extends uvm_object;
         return result;
     endfunction
 
+    // Update ACCEL UART and DMA interrupt routing based on configuration registers
+    task update_accel_uart_dma_routing(int_routing_model routing_model);
+        logic [31:0] accel_uart_sel_value;
+        logic [31:0] accel_dma_ch_sel_value;
+        int uart_bit_pos, dma_bit_pos;
+        int selected_uart_index, selected_dma_index;
+        string accel_uart_path, accel_dma_path;
+        int accel_uart_dest_index, accel_dma_dest_index;
+
+        `uvm_info("INT_REG_MODEL", "🔄 Updating ACCEL UART and DMA interrupt routing based on configuration registers", UVM_MEDIUM)
+
+        // Get UART selection register value
+        if (current_mask_values.exists(ADDR_ACCEL_UART_SEL)) begin
+            accel_uart_sel_value = current_mask_values[ADDR_ACCEL_UART_SEL];
+            `uvm_info("INT_REG_MODEL", $sformatf("📖 ACCEL_UART_SEL value: 0x%08x", accel_uart_sel_value), UVM_MEDIUM)
+        end else begin
+            accel_uart_sel_value = 32'h00000000; // Default: all route to uart0
+            `uvm_info("INT_REG_MODEL", $sformatf("⚠️  No ACCEL_UART_SEL value, using default 0x%08x", accel_uart_sel_value), UVM_MEDIUM)
+        end
+
+        // Get DMA channel selection register value
+        if (current_mask_values.exists(ADDR_ACCEL_DMA_CH_SEL)) begin
+            accel_dma_ch_sel_value = current_mask_values[ADDR_ACCEL_DMA_CH_SEL];
+            `uvm_info("INT_REG_MODEL", $sformatf("📖 ACCEL_DMA_CH_SEL value: 0x%08x", accel_dma_ch_sel_value), UVM_MEDIUM)
+        end else begin
+            accel_dma_ch_sel_value = 32'h00000000; // Default: all route to dma_ch0
+            `uvm_info("INT_REG_MODEL", $sformatf("⚠️  No ACCEL_DMA_CH_SEL value, using default 0x%08x", accel_dma_ch_sel_value), UVM_MEDIUM)
+        end
+
+        // Update UART interrupt routing
+        foreach (routing_model.interrupt_map[i]) begin
+            if (routing_model.interrupt_map[i].name.substr(0, 10) == "iosub_uart" &&
+                routing_model.interrupt_map[i].name.substr(routing_model.interrupt_map[i].name.len()-5, routing_model.interrupt_map[i].name.len()-1) == "_intr") begin
+
+                // Extract UART index from interrupt name
+                string uart_num_str = routing_model.interrupt_map[i].name.substr(11, routing_model.interrupt_map[i].name.len()-6);
+                int uart_index = uart_num_str.atoi();
+
+                if (uart_index >= 0 && uart_index <= 4) begin
+                    // Check if this UART is routed to any uart_to_accel_intr[0:2]
+                    bit is_routed = 0;
+                    int routed_accel_bit = -1;
+
+                    for (int accel_uart_bit = 0; accel_uart_bit <= 2; accel_uart_bit++) begin
+                        uart_bit_pos = accel_uart_bit * 4; // Bits [0,1], [4,5], [8,9]
+                        selected_uart_index = (accel_uart_sel_value >> uart_bit_pos) & 2'b11; // Extract 2-bit value
+
+                        if (selected_uart_index == uart_index) begin
+                            is_routed = 1;
+                            routed_accel_bit = accel_uart_bit;
+                            break;
+                        end
+                    end
+
+                    if (is_routed) begin
+                        // Update routing to ACCEL
+                        routing_model.interrupt_map[i].to_accel = 1;
+                        // uart_to_accel_intr[0:2] maps to iosub_accel_peri_intr[18:20]
+                        accel_uart_dest_index = 18 + routed_accel_bit;
+                        routing_model.interrupt_map[i].dest_index_accel = accel_uart_dest_index;
+                        accel_uart_path = $sformatf("top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.iosub_accel_peri_intr[%0d]", accel_uart_dest_index);
+                        routing_model.interrupt_map[i].rtl_path_accel = accel_uart_path;
+
+                        `uvm_info("INT_REG_MODEL", $sformatf("✅ Updated UART routing: %s → ACCEL (uart_to_accel_intr[%0d] → iosub_accel_peri_intr[%0d])",
+                                  routing_model.interrupt_map[i].name, routed_accel_bit, accel_uart_dest_index), UVM_MEDIUM)
+                    end else begin
+                        // Disable routing to ACCEL
+                        routing_model.interrupt_map[i].to_accel = 0;
+                        routing_model.interrupt_map[i].dest_index_accel = -1;
+                        routing_model.interrupt_map[i].rtl_path_accel = "";
+
+                        `uvm_info("INT_REG_MODEL", $sformatf("🚫 Disabled UART routing: %s (uart_index=%0d not selected)",
+                                  routing_model.interrupt_map[i].name, uart_index), UVM_MEDIUM)
+                    end
+                end
+            end
+        end
+
+        // Update DMA interrupt routing
+        foreach (routing_model.interrupt_map[i]) begin
+            if (routing_model.interrupt_map[i].name.substr(0, 12) == "iosub_dma_ch" &&
+                routing_model.interrupt_map[i].name.substr(routing_model.interrupt_map[i].name.len()-5, routing_model.interrupt_map[i].name.len()-1) == "_intr") begin
+
+                // Extract DMA channel index from interrupt name
+                string dma_num_str = routing_model.interrupt_map[i].name.substr(13, routing_model.interrupt_map[i].name.len()-6);
+                int dma_index = dma_num_str.atoi();
+
+                if (dma_index >= 0 && dma_index <= 15) begin
+                    // Check if this DMA channel is routed to any dma_to_accel_intr[0:5]
+                    bit is_routed = 0;
+                    int routed_accel_bit = -1;
+
+                    for (int accel_dma_bit = 0; accel_dma_bit <= 5; accel_dma_bit++) begin
+                        dma_bit_pos = accel_dma_bit * 4; // Bits [0,3], [4,7], [8,11], [12,15], [16,19], [20,23]
+                        selected_dma_index = (accel_dma_ch_sel_value >> dma_bit_pos) & 4'hF; // Extract 4-bit value
+
+                        if (selected_dma_index == dma_index) begin
+                            is_routed = 1;
+                            routed_accel_bit = accel_dma_bit;
+                            break;
+                        end
+                    end
+
+                    if (is_routed) begin
+                        // Update routing to ACCEL
+                        routing_model.interrupt_map[i].to_accel = 1;
+                        // dma_to_accel_intr[0:5] maps to iosub_accel_peri_intr[22:27]
+                        accel_dma_dest_index = 22 + routed_accel_bit;
+                        routing_model.interrupt_map[i].dest_index_accel = accel_dma_dest_index;
+                        accel_dma_path = $sformatf("top_tb.multidie_top.DUT[0].u_str_top.u_iosub_top_wrap.iosub_accel_peri_intr[%0d]", accel_dma_dest_index);
+                        routing_model.interrupt_map[i].rtl_path_accel = accel_dma_path;
+
+                        `uvm_info("INT_REG_MODEL", $sformatf("✅ Updated DMA routing: %s → ACCEL (dma_to_accel_intr[%0d] → iosub_accel_peri_intr[%0d])",
+                                  routing_model.interrupt_map[i].name, routed_accel_bit, accel_dma_dest_index), UVM_MEDIUM)
+                    end else begin
+                        // Disable routing to ACCEL
+                        routing_model.interrupt_map[i].to_accel = 0;
+                        routing_model.interrupt_map[i].dest_index_accel = -1;
+                        routing_model.interrupt_map[i].rtl_path_accel = "";
+
+                        `uvm_info("INT_REG_MODEL", $sformatf("🚫 Disabled DMA routing: %s (dma_index=%0d not selected)",
+                                  routing_model.interrupt_map[i].name, dma_index), UVM_MEDIUM)
+                    end
+                end
+            end
+        end
+
+        `uvm_info("INT_REG_MODEL", "✅ ACCEL UART and DMA interrupt routing update completed", UVM_MEDIUM)
+    endtask
+
 endclass
 
 `endif // INT_REGISTER_MODEL_SV

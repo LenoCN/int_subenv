@@ -51,6 +51,10 @@ class int_tc_base extends soc_tc_base;
         `uvm_info(get_type_name(), "Randomizing interrupt mask registers...", UVM_MEDIUM)
         m_register_model.randomize_mask_registers();
 
+        // Update ACCEL UART and DMA interrupt routing based on configuration registers
+        `uvm_info(get_type_name(), "Updating ACCEL UART and DMA interrupt routing...", UVM_MEDIUM)
+        m_register_model.update_accel_uart_dma_routing(m_routing_model);
+
         // Print the randomized configuration
         m_register_model.print_register_config();
 
