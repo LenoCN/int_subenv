@@ -156,9 +156,12 @@ def parse_main_sheet(df: pd.DataFrame) -> Dict[str, InterruptInfo]:
 
             # Check routing destinations
             for dest_col, dest_name in [('to AP?', 'AP'), ('to SCP?', 'SCP'), ('to MCP?', 'MCP'),
-                                       ('to ACCEL?', 'ACCEL'), ('to IO?', 'IO'), ('to other DIE?', 'OTHER_DIE')]:
-                if pd.notna(row[dest_col]) and ('Y' in str(row[dest_col]).upper() or 'P' in str(row[dest_col]).upper()):
-                    interrupt_info.add_destination(dest_name, -1)  # Will be filled later
+                                       ('to IMU?', 'ACCEL'), ('to IO?', 'IO'), ('to other DIE?', 'OTHER_DIE')]:
+                if pd.notna(row[dest_col]):
+                    dest_val = str(row[dest_col]).upper()
+                    # Only add destination if it's explicitly YES, not just Possible
+                    if 'YES' in dest_val:
+                        interrupt_info.add_destination(dest_name, -1)  # Will be filled later
 
             interrupts[name_sanitized] = interrupt_info
 
@@ -208,9 +211,12 @@ def parse_mscp_sheet(df: pd.DataFrame) -> Dict[str, InterruptInfo]:
 
             # Check routing destinations
             for dest_col, dest_name in [('to AP?', 'AP'), ('to SCP?', 'SCP'), ('to MCP?', 'MCP'),
-                                       ('to ACCEL?', 'ACCEL'), ('to IO?', 'IO')]:
-                if pd.notna(row[dest_col]) and ('Y' in str(row[dest_col]).upper() or 'P' in str(row[dest_col]).upper()):
-                    interrupt_info.add_destination(dest_name, -1)  # Will be filled later
+                                       ('to IMU?', 'ACCEL'), ('to IO?', 'IO')]:
+                if pd.notna(row[dest_col]):
+                    dest_val = str(row[dest_col]).upper()
+                    # Only add destination if it's explicitly YES, not just Possible
+                    if 'YES' in dest_val:
+                        interrupt_info.add_destination(dest_name, -1)  # Will be filled later
 
             interrupts[name_sanitized] = interrupt_info
 
@@ -221,17 +227,34 @@ def parse_destination_sheet(df: pd.DataFrame, sheet_name: str) -> Dict[str, int]
     interrupt_indices = {}
 
     # Sheet-specific parsing logic based on observed structure
-    if 'SCP M7' in sheet_name or 'MCP M7' in sheet_name:
-        # For SCP/MCP M7 sheets: index in column 1, name in column 2
-        index_col = df.columns[1]  # 'SCP M7中断列表' or 'MCP M7中断列表'
+    if 'SCP M7' in sheet_name:
+        # For SCP M7 sheet: index in column 1, name in column 2
+        index_col = df.columns[1]  # 'SCP M7中断列表'
         name_col = df.columns[2]   # 'Unnamed: 2'
 
         for idx, row in df.iterrows():
             if pd.notna(row[name_col]) and pd.notna(row[index_col]):
                 interrupt_name = str(row[name_col]).strip()
                 try:
-                    # Skip header rows
-                    if interrupt_name.lower() in ['interrupt name', 'interrupt']:
+                    # Skip header rows and NMI entries
+                    if interrupt_name.lower() in ['interrupt name', 'interrupt'] or str(row[index_col]).upper() == 'NMI':
+                        continue
+                    interrupt_index = int(float(row[index_col]))
+                    interrupt_indices[interrupt_name] = interrupt_index
+                except (ValueError, TypeError):
+                    continue
+
+    elif 'MCP M7' in sheet_name:
+        # For MCP M7 sheet: index in column 1, name in column 2
+        index_col = df.columns[1]  # 'MCP M7中断列表'
+        name_col = df.columns[2]   # 'Unnamed: 2'
+
+        for idx, row in df.iterrows():
+            if pd.notna(row[name_col]) and pd.notna(row[index_col]):
+                interrupt_name = str(row[name_col]).strip()
+                try:
+                    # Skip header rows and NMI entries
+                    if interrupt_name.lower() in ['interrupt name', 'interrupt'] or str(row[index_col]).upper() == 'NMI':
                         continue
                     interrupt_index = int(float(row[index_col]))
                     interrupt_indices[interrupt_name] = interrupt_index
@@ -272,39 +295,7 @@ def parse_destination_sheet(df: pd.DataFrame, sheet_name: str) -> Dict[str, int]
                 except (ValueError, TypeError):
                     continue
 
-    elif 'SCP M7' in sheet_name:
-        # For SCP sheet: index in column 1, name in column 2
-        index_col = df.columns[1]  # 'SCP M7中断列表'
-        name_col = df.columns[2]   # 'Unnamed: 2'
 
-        for idx, row in df.iterrows():
-            if pd.notna(row[name_col]) and pd.notna(row[index_col]):
-                interrupt_name = str(row[name_col]).strip()
-                try:
-                    # Skip header rows and NMI entries
-                    if interrupt_name.lower() in ['interrupt name', 'interrupt'] or str(row[index_col]).upper() == 'NMI':
-                        continue
-                    interrupt_index = int(float(row[index_col]))
-                    interrupt_indices[interrupt_name] = interrupt_index
-                except (ValueError, TypeError):
-                    continue
-
-    elif 'MCP M7' in sheet_name:
-        # For MCP sheet: index in column 1, name in column 2
-        index_col = df.columns[1]  # 'MCP M7中断列表'
-        name_col = df.columns[2]   # 'Unnamed: 2'
-
-        for idx, row in df.iterrows():
-            if pd.notna(row[name_col]) and pd.notna(row[index_col]):
-                interrupt_name = str(row[name_col]).strip()
-                try:
-                    # Skip header rows and NMI entries
-                    if interrupt_name.lower() in ['interrupt name', 'interrupt'] or str(row[index_col]).upper() == 'NMI':
-                        continue
-                    interrupt_index = int(float(row[index_col]))
-                    interrupt_indices[interrupt_name] = interrupt_index
-                except (ValueError, TypeError):
-                    continue
 
     elif 'iosub-to-IO' in sheet_name:
         # For IO sheet: index in column 1, name in column 2
