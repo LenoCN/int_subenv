@@ -12,6 +12,11 @@
 *_demo*
 *_test*
 
+# Temporary documentation
+*_DRAFT.md
+*_WIP.md
+*_OLD.md
+
 # Python cache
 __pycache__/
 *.pyc
