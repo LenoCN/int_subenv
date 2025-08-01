@@ -729,6 +729,12 @@ class int_register_model extends uvm_object;
         int selected_uart_index, selected_dma_index;
         string accel_uart_path, accel_dma_path;
         int accel_uart_dest_index, accel_dma_dest_index;
+        string uart_num_str;
+        int uart_index;
+        bit is_routed;
+        int routed_accel_bit;
+        string dma_num_str;
+        int dma_index;
 
         `uvm_info("INT_REG_MODEL", "🔄 Updating ACCEL UART and DMA interrupt routing based on configuration registers", UVM_MEDIUM)
 
@@ -756,13 +762,13 @@ class int_register_model extends uvm_object;
                 routing_model.interrupt_map[i].name.substr(routing_model.interrupt_map[i].name.len()-5, routing_model.interrupt_map[i].name.len()-1) == "_intr") begin
 
                 // Extract UART index from interrupt name
-                string uart_num_str = routing_model.interrupt_map[i].name.substr(11, routing_model.interrupt_map[i].name.len()-6);
-                int uart_index = uart_num_str.atoi();
+                uart_num_str = routing_model.interrupt_map[i].name.substr(11, routing_model.interrupt_map[i].name.len()-6);
+                uart_index = uart_num_str.atoi();
 
                 if (uart_index >= 0 && uart_index <= 4) begin
                     // Check if this UART is routed to any uart_to_accel_intr[0:2]
-                    bit is_routed = 0;
-                    int routed_accel_bit = -1;
+                    is_routed = 0;
+                    routed_accel_bit = -1;
 
                     for (int accel_uart_bit = 0; accel_uart_bit <= 2; accel_uart_bit++) begin
                         uart_bit_pos = accel_uart_bit * 4; // Bits [0,1], [4,5], [8,9]
@@ -805,13 +811,13 @@ class int_register_model extends uvm_object;
                 routing_model.interrupt_map[i].name.substr(routing_model.interrupt_map[i].name.len()-5, routing_model.interrupt_map[i].name.len()-1) == "_intr") begin
 
                 // Extract DMA channel index from interrupt name
-                string dma_num_str = routing_model.interrupt_map[i].name.substr(13, routing_model.interrupt_map[i].name.len()-6);
-                int dma_index = dma_num_str.atoi();
+                dma_num_str = routing_model.interrupt_map[i].name.substr(13, routing_model.interrupt_map[i].name.len()-6);
+                dma_index = dma_num_str.atoi();
 
                 if (dma_index >= 0 && dma_index <= 15) begin
                     // Check if this DMA channel is routed to any dma_to_accel_intr[0:5]
-                    bit is_routed = 0;
-                    int routed_accel_bit = -1;
+                    is_routed = 0;
+                    routed_accel_bit = -1;
 
                     for (int accel_dma_bit = 0; accel_dma_bit <= 5; accel_dma_bit++) begin
                         dma_bit_pos = accel_dma_bit * 4; // Bits [0,3], [4,7], [8,11], [12,15], [16,19], [20,23]
