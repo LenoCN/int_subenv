@@ -45,15 +45,15 @@ def test_main_file():
     assert '`include "int_map_entries.svh"' in content
     
     # 检查类定义
-    assert 'class int_routing_model;' in content
+    assert 'class int_routing_model extends uvm_object;' in content
     
     # 检查函数定义
     functions = [
-        'static function void build()',
-        'static function interrupt_info_s get_merge_sources(',
-        'static function bit is_merge_interrupt(',
-        'static function bit interrupt_exists(',
-        'static function interrupt_info_s get_merge_interrupt_info('
+        'function void build()',
+        'function int get_merge_sources(',
+        'function bit is_merge_interrupt(',
+        'function bit interrupt_exists(',
+        'function interrupt_info_s get_merge_interrupt_info('
     ]
     
     for func in functions:

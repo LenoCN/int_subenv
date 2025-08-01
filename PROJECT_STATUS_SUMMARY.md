@@ -7,7 +7,8 @@
 **完成度**: 98% (所有子系统mask支持完成，待DUT适配)
 **最后更新**: 2025-07-30
 
-### 🆕 最新更新 (2025-07-31)
+### 🆕 最新更新 (2025-08-01)
+✅ **修复IOSUB RAS Merge逻辑** - iosub_ras_*_intr现在仅merge smmu的ras中断，简化merge逻辑
 ✅ **修复Mask一致性问题** - 统一add_expected_with_mask和wait_for_interrupt_detection的mask逻辑
 ✅ **统一ACCEL和IMU术语** - 移除所有IMU引用，统一使用ACCEL
 ✅ **完成ACCEL子系统mask处理** - 32位mask寄存器支持

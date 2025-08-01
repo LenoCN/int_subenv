@@ -63,23 +63,15 @@ def extract_expected_merge_from_csv(csv_file_path):
         ],
         
         "iosub_ras_cri_intr": [
-            "smmu_cri_intr",
-            "scp_ras_cri_intr",
-            "mcp_ras_cri_intr"
+            "smmu_cri_intr"
         ],
-        
+
         "iosub_ras_eri_intr": [
-            "smmu_eri_intr", 
-            "scp_ras_eri_intr",
-            "mcp_ras_eri_intr"
+            "smmu_eri_intr"
         ],
-        
+
         "iosub_ras_fhi_intr": [
-            "smmu_fhi_intr",
-            "scp_ras_fhi_intr",
-            "mcp_ras_fhi_intr",
-            "iodap_chk_err_etf0",
-            "iodap_chk_err_etf1"
+            "smmu_fhi_intr"
         ],
         
         "iosub_abnormal_0_intr": [
