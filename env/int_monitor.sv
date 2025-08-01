@@ -77,6 +77,9 @@ class int_monitor extends uvm_monitor;
 
     // Monitors a single interrupt's destinations
     virtual task monitor_interrupt(interrupt_info_s info);
+        // Task 2: Check routing configuration before monitoring
+        validate_routing_configuration(info);
+
         fork
             if (info.rtl_path_ap != "") monitor_single_path(info, "AP", info.rtl_path_ap);
             if (info.rtl_path_scp != "") monitor_single_path(info, "SCP", info.rtl_path_scp);
@@ -295,6 +298,93 @@ class int_monitor extends uvm_monitor;
         end
 
         `uvm_info(get_type_name(), $sformatf("🔍 === END ROUTING DEBUG: %s ===", info.name), UVM_HIGH)
+    endfunction
+
+    // Task 2: Validate routing configuration before monitoring
+    virtual function void validate_routing_configuration(interrupt_info_s info);
+        string config_errors[$];
+        bit has_routing_enabled = 0;
+
+        `uvm_info(get_type_name(), $sformatf("🔍 === VALIDATING ROUTING CONFIG: %s ===", info.name), UVM_HIGH)
+
+        // Check each destination for routing configuration consistency
+        if (info.to_ap) begin
+            has_routing_enabled = 1;
+            if (info.rtl_path_ap == "") begin
+                config_errors.push_back($sformatf("AP routing enabled (to_ap=1) but rtl_path_ap is empty"));
+            end else begin
+                `uvm_info(get_type_name(), $sformatf("✅ AP routing: %s", info.rtl_path_ap), UVM_HIGH)
+            end
+        end
+
+        if (info.to_scp) begin
+            has_routing_enabled = 1;
+            if (info.rtl_path_scp == "") begin
+                // Special handling for iosub_normal_intr - it's a merge signal
+                if (info.name == "iosub_normal_intr") begin
+                    `uvm_info(get_type_name(), $sformatf("⚠️  SCP routing: %s is a merge signal, empty rtl_path_scp is expected", info.name), UVM_MEDIUM)
+                end else begin
+                    config_errors.push_back($sformatf("SCP routing enabled (to_scp=1) but rtl_path_scp is empty"));
+                end
+            end else begin
+                `uvm_info(get_type_name(), $sformatf("✅ SCP routing: %s", info.rtl_path_scp), UVM_HIGH)
+            end
+        end
+
+        if (info.to_mcp) begin
+            has_routing_enabled = 1;
+            if (info.rtl_path_mcp == "") begin
+                // Special handling for iosub_normal_intr - it's a merge signal
+                if (info.name == "iosub_normal_intr") begin
+                    `uvm_info(get_type_name(), $sformatf("⚠️  MCP routing: %s is a merge signal, empty rtl_path_mcp is expected", info.name), UVM_MEDIUM)
+                end else begin
+                    config_errors.push_back($sformatf("MCP routing enabled (to_mcp=1) but rtl_path_mcp is empty"));
+                end
+            end else begin
+                `uvm_info(get_type_name(), $sformatf("✅ MCP routing: %s", info.rtl_path_mcp), UVM_HIGH)
+            end
+        end
+
+        if (info.to_accel) begin
+            has_routing_enabled = 1;
+            if (info.rtl_path_accel == "") begin
+                config_errors.push_back($sformatf("ACCEL routing enabled (to_accel=1) but rtl_path_accel is empty"));
+            end else begin
+                `uvm_info(get_type_name(), $sformatf("✅ ACCEL routing: %s", info.rtl_path_accel), UVM_HIGH)
+            end
+        end
+
+        if (info.to_io) begin
+            has_routing_enabled = 1;
+            if (info.rtl_path_io == "") begin
+                config_errors.push_back($sformatf("IO routing enabled (to_io=1) but rtl_path_io is empty"));
+            end else begin
+                `uvm_info(get_type_name(), $sformatf("✅ IO routing: %s", info.rtl_path_io), UVM_HIGH)
+            end
+        end
+
+        if (info.to_other_die) begin
+            has_routing_enabled = 1;
+            if (info.rtl_path_other_die == "") begin
+                config_errors.push_back($sformatf("OTHER_DIE routing enabled (to_other_die=1) but rtl_path_other_die is empty"));
+            end else begin
+                `uvm_info(get_type_name(), $sformatf("✅ OTHER_DIE routing: %s", info.rtl_path_other_die), UVM_HIGH)
+            end
+        end
+
+        // Report configuration errors
+        if (config_errors.size() > 0) begin
+            `uvm_error(get_type_name(), $sformatf("🚨 ROUTING CONFIG ERROR for '%s':", info.name))
+            foreach (config_errors[i]) begin
+                `uvm_error(get_type_name(), $sformatf("   %0d. %s", i+1, config_errors[i]))
+            end
+        end else if (has_routing_enabled) begin
+            `uvm_info(get_type_name(), $sformatf("✅ Routing configuration valid for '%s'", info.name), UVM_HIGH)
+        end else begin
+            `uvm_info(get_type_name(), $sformatf("ℹ️  No routing enabled for '%s'", info.name), UVM_HIGH)
+        end
+
+        `uvm_info(get_type_name(), $sformatf("🔍 === END ROUTING CONFIG VALIDATION: %s ===", info.name), UVM_HIGH)
     endfunction
 
     // Debug function to show interrupt configuration summary at startup
