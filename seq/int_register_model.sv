@@ -229,6 +229,30 @@ class int_register_model extends uvm_object;
         `uvm_info("INT_REG_MODEL", $sformatf("🔍 Checking mask status for interrupt '%s' to destination '%s'",
                   interrupt_name, destination), UVM_HIGH)
 
+        // Special handling for merge interrupts that route indirectly via other merge interrupts
+        // For example: iosub_slv_err_intr → iosub_normal_intr → SCP/MCP
+        if (interrupt_name == "iosub_slv_err_intr" && (destination.toupper() == "SCP" || destination.toupper() == "MCP")) begin
+            `uvm_info("INT_REG_MODEL", $sformatf("🔗 Special handling: %s routes indirectly to %s via iosub_normal_intr",
+                      interrupt_name, destination), UVM_HIGH)
+
+            // For iosub_slv_err_intr routing to SCP/MCP, we need to check:
+            // 1. iosub_normal_intr mask (since iosub_slv_err_intr is merged into it)
+            // 2. The general SCP/MCP mask for iosub_normal_intr
+
+            // Check if iosub_normal_intr itself would be masked to this destination
+            bit iosub_normal_masked = is_interrupt_masked("iosub_normal_intr", destination, routing_model);
+
+            if (iosub_normal_masked) begin
+                `uvm_info("INT_REG_MODEL", $sformatf("🚫 %s blocked because iosub_normal_intr is masked to %s",
+                          interrupt_name, destination), UVM_HIGH)
+                return 1; // Blocked by iosub_normal_intr mask
+            end else begin
+                `uvm_info("INT_REG_MODEL", $sformatf("✅ %s can route to %s via iosub_normal_intr (not masked)",
+                          interrupt_name, destination), UVM_HIGH)
+                return 0; // Not masked
+            end
+        end
+
         // Special handling for IOSUB normal interrupts
         // Check if interrupt belongs to IOSUB group and has index in [0,9] or [15,50] ranges
         bit is_iosub_normal = 0;
