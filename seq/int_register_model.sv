@@ -229,6 +229,30 @@ class int_register_model extends uvm_object;
         `uvm_info("INT_REG_MODEL", $sformatf("🔍 Checking mask status for interrupt '%s' to destination '%s'",
                   interrupt_name, destination), UVM_HIGH)
 
+        // Special handling for merge interrupts that route indirectly via iosub_normal_intr
+        // All iosub_normal_intr sources route indirectly: source → iosub_normal_intr → SCP/MCP
+        if (is_iosub_normal_intr_source(interrupt_name, routing_model) && (destination.toupper() == "SCP" || destination.toupper() == "MCP")) begin
+            `uvm_info("INT_REG_MODEL", $sformatf("🔗 Special handling: %s routes indirectly to %s via iosub_normal_intr",
+                      interrupt_name, destination), UVM_HIGH)
+
+            // For all iosub_normal_intr sources routing to SCP/MCP, we need to check:
+            // 1. iosub_normal_intr mask (since the source is merged into it)
+            // 2. The general SCP/MCP mask for iosub_normal_intr
+
+            // Check if iosub_normal_intr itself would be masked to this destination
+            bit iosub_normal_masked = is_interrupt_masked("iosub_normal_intr", destination, routing_model);
+
+            if (iosub_normal_masked) begin
+                `uvm_info("INT_REG_MODEL", $sformatf("🚫 %s blocked because iosub_normal_intr is masked to %s",
+                          interrupt_name, destination), UVM_HIGH)
+                return 1; // Blocked by iosub_normal_intr mask
+            end else begin
+                `uvm_info("INT_REG_MODEL", $sformatf("✅ %s can route to %s via iosub_normal_intr (not masked)",
+                          interrupt_name, destination), UVM_HIGH)
+                return 0; // Not masked
+            end
+        end
+
         // Special handling for IOSUB normal interrupts
         // Check if interrupt belongs to IOSUB group and has index in [0,9] or [15,50] ranges
         bit is_iosub_normal = 0;
@@ -854,8 +878,32 @@ class int_register_model extends uvm_object;
             end
         end
 
-        `uvm_info("INT_REG_MODEL", "✅ ACCEL UART and DMA interrupt routing update completed", UVM_MEDIUM)
+        `uvm_info("INT_REG_MODEL", "ACCEL UART and DMA interrupt routing update completed", UVM_MEDIUM)
     endtask
+
+    // Function to check if an interrupt is a source for iosub_normal_intr merge
+    // Based on IOSUB group and index ranges [0,9] and [15,50]
+    function bit is_iosub_normal_intr_source(string interrupt_name, int_routing_model routing_model);
+        foreach (routing_model.interrupt_map[i]) begin
+            if (routing_model.interrupt_map[i].name == interrupt_name) begin
+                if (routing_model.interrupt_map[i].group == IOSUB) begin
+                    int idx = routing_model.interrupt_map[i].index;
+                    if ((idx >= 0 && idx <= 9) || (idx >= 15 && idx <= 50)) begin
+                        `uvm_info("INT_REG_MODEL", $sformatf("Identified as IOSUB normal interrupt source: %s (group=IOSUB, index=%0d)",
+                                  interrupt_name, idx), UVM_HIGH)
+                        return 1;
+                    end else begin
+                        `uvm_info("INT_REG_MODEL", $sformatf("IOSUB interrupt but not normal range: %s (group=IOSUB, index=%0d)",
+                                  interrupt_name, idx), UVM_HIGH)
+                        return 0;
+                    end
+                end else begin
+                    return 0; // Not IOSUB group
+                end
+            end
+        end
+        return 0; // Interrupt not found
+    endfunction
 
 endclass
 
