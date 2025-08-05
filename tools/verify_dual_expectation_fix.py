@@ -91,6 +91,24 @@ def verify_dual_expectation_fix():
         checks.append(("✅", f"多源条件判断 (找到 {multi_source_count} 处)"))
     else:
         checks.append(("❌", f"多源条件判断 (只找到 {multi_source_count} 处，期望至少3处)"))
+
+    # 11. 检查单个中断的 iosub_normal_intr 源检查
+    if "is_iosub_normal_source = m_routing_model.is_iosub_normal_intr_source(info.name);" in content:
+        checks.append(("✅", "单个中断 iosub_normal_intr 源检查"))
+    else:
+        checks.append(("❌", "单个中断 iosub_normal_intr 源检查"))
+
+    # 12. 检查单个中断的双重路由逻辑
+    if "SINGLE INTERRUPT DUAL ROUTING" in content:
+        checks.append(("✅", "单个中断双重路由逻辑"))
+    else:
+        checks.append(("❌", "单个中断双重路由逻辑"))
+
+    # 13. 检查 is_iosub_normal_source 变量定义
+    if "bit is_iosub_normal_source = 0;" in content:
+        checks.append(("✅", "is_iosub_normal_source 变量定义"))
+    else:
+        checks.append(("❌", "is_iosub_normal_source 变量定义"))
     
     # 输出检查结果
     print("📋 检查结果:")

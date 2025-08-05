@@ -72,21 +72,56 @@ end
 - 在检测阶段等待所有直接路由的响应
 - 在状态更新阶段更新所有相关中断的状态
 
+### 3. 修复 `test_single_interrupt` 函数
+
+**新增逻辑**：
+- 检查单个中断是否属于 `iosub_normal_intr` 汇聚源
+- 如果是汇聚源，同时注册 merge 中断的预期
+- 在检测阶段等待两种路由的响应
+- 在状态更新阶段更新两种中断的状态
+
 **关键代码变更**：
 ```systemverilog
 // 多源双重预期注册
 add_expected_with_mask(merge_info);  // Merge 路由预期
 foreach (source_interrupts[i]) begin
     if (source_interrupts[i].rtl_path_src != "") begin
-        bit source_has_direct_routing = (source_interrupts[i].to_ap || 
-                                        source_interrupts[i].to_accel || 
-                                        source_interrupts[i].to_io || 
+        bit source_has_direct_routing = (source_interrupts[i].to_ap ||
+                                        source_interrupts[i].to_accel ||
+                                        source_interrupts[i].to_io ||
                                         source_interrupts[i].to_other_die);
         if (source_has_direct_routing) begin
             add_expected_with_mask(source_interrupts[i]);  // 直接路由预期
         end
     end
 end
+```
+
+### 4. 修复 `test_single_interrupt` 函数
+
+**新增逻辑**：
+- 在单个中断测试中检查是否为 `iosub_normal_intr` 汇聚源
+- 如果是汇聚源，同时注册 merge 中断和源中断的预期
+- 完整的双重检测和状态更新流程
+
+**关键代码变更**：
+```systemverilog
+// 检查是否为 iosub_normal_intr 汇聚源
+is_iosub_normal_source = m_routing_model.is_iosub_normal_intr_source(info.name);
+
+if (is_iosub_normal_source) begin
+    // 注册 iosub_normal_intr 预期 (merge 路由)
+    add_expected_with_mask(iosub_normal_info);
+end
+
+// 注册源中断预期 (直接路由)
+add_expected_with_mask(info);
+
+// 双重检测等待
+if (is_iosub_normal_source) begin
+    wait_for_interrupt_detection_with_mask(iosub_normal_info);
+end
+wait_for_interrupt_detection_with_mask(info);
 ```
 
 ## 🎯 修复效果

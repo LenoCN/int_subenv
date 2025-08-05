@@ -9,6 +9,7 @@
 
 ### 🆕 最新更新 (2025-08-05)
 ✅ **🎯 关键修复：双重预期逻辑完善** - 修复既属于iosub_normal_intr汇聚源又有直接路由的中断的预期处理问题
+✅ **🔧 补充修复：test_single_interrupt双重路由** - 修复单个中断测试中缺失的iosub_normal_intr汇聚源检查
 ✅ **🔗 重大修复：多层Merge中断路由预测** - 修复iosub_slv_err_intr等merge中断的间接路由预测问题
 ✅ **🎭 完善间接路由Mask处理** - 为通过merge汇聚的中断添加正确的mask检查逻辑
 ✅ **修复lightweight_sequence中断激励逻辑** - 修复对无路由目的地中断的错误激励问题
