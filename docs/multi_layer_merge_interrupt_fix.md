@@ -4,12 +4,15 @@
 
 在进行`iosub_normal_intr`汇聚源中断处理的时候，虽然这些中断在路由配置中不直接包含SCP和MCP路由，但是由于它们都被汇聚为`iosub_normal_intr`中断，因此在进行目的预测的时候还要同时考虑`iosub_normal_intr`是否分别经过scp和mcp的`iosub_normal_intr` mask可以被路由到MCP和SCP。
 
-**影响的中断包括**：
-- `iosub_slv_err_intr` (merge中断，进一步汇聚USB相关中断)
-- `iosub_pmbus0_intr`, `iosub_pmbus1_intr` (PMBUS中断)
-- `iosub_mem_ist_intr` (内存中断)
-- `iosub_dma_comreg_intr` (DMA通用寄存器中断)
-- `iosub_dma_ch0_intr` ~ `iosub_dma_ch15_intr` (DMA通道中断)
+**影响的中断范围**：
+- **IOSUB组中断**: `group == IOSUB`
+- **Index范围**: `[0,9]` 和 `[15,50]`
+- **包含中断**: 所有符合上述条件的IOSUB中断，例如：
+  - `iosub_slv_err_intr` (index=0, merge中断)
+  - `iosub_pmbus0_intr`, `iosub_pmbus1_intr` (PMBUS中断)
+  - `iosub_mem_ist_intr` (内存中断)
+  - `iosub_dma_comreg_intr` (DMA通用寄存器中断)
+  - `iosub_dma_ch0_intr` ~ `iosub_dma_ch15_intr` (DMA通道中断)
 
 ## 问题分析
 
@@ -56,24 +59,31 @@ if (!routing_enabled && is_merge_interrupt(interrupt_name)) begin
 end
 ```
 
-### 2. 间接路由检查函数
+### 2. 基于Index范围的汇聚源识别
 
-新增`check_indirect_routing_via_merge`函数处理特定的merge汇聚关系：
+新增基于index范围的`is_iosub_normal_intr_source`函数：
 
 ```systemverilog
-function bit check_indirect_routing_via_merge(string interrupt_name, string destination);
-    // Special case: iosub_slv_err_intr is merged into iosub_normal_intr
-    if (interrupt_name == "iosub_slv_err_intr") begin
-        // Check if iosub_normal_intr has routing to the destination
-        foreach (interrupt_map[i]) begin
-            if (interrupt_map[i].name == "iosub_normal_intr") begin
-                case (destination.toupper())
-                    "SCP": has_indirect_routing = interrupt_map[i].to_scp;
-                    "MCP": has_indirect_routing = interrupt_map[i].to_mcp;
-                    // ... 其他目标
-                endcase
+function bit is_iosub_normal_intr_source(string interrupt_name);
+    foreach (interrupt_map[i]) begin
+        if (interrupt_map[i].name == interrupt_name) begin
+            if (interrupt_map[i].group == IOSUB) begin
+                int idx = interrupt_map[i].index;
+                // IOSUB normal interrupt index ranges: [0,9] and [15,50]
+                if ((idx >= 0 && idx <= 9) || (idx >= 15 && idx <= 50)) begin
+                    return 1; // This is an iosub_normal_intr source
+                end
             end
         end
+    end
+    return 0;
+endfunction
+
+function bit check_indirect_routing_via_merge(string interrupt_name, string destination);
+    // Check if this interrupt is a source for iosub_normal_intr
+    if (is_iosub_normal_intr_source(interrupt_name)) begin
+        // Check if iosub_normal_intr has routing to the destination
+        // Return routing status based on iosub_normal_intr configuration
     end
     return has_indirect_routing;
 endfunction

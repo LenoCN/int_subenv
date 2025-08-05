@@ -377,30 +377,27 @@ class int_routing_model extends uvm_object;
     endfunction
 
     // Function to check if an interrupt is a source for iosub_normal_intr merge
+    // Based on IOSUB group and index ranges [0,9] and [15,50]
     function bit is_iosub_normal_intr_source(string interrupt_name);
-        return (interrupt_name == "iosub_pmbus0_intr" ||
-                interrupt_name == "iosub_pmbus1_intr" ||
-                interrupt_name == "iosub_mem_ist_intr" ||
-                interrupt_name == "iosub_dma_comreg_intr" ||
-                // All DMAC channel interrupts (ch0-ch15)
-                interrupt_name == "iosub_dma_ch0_intr" ||
-                interrupt_name == "iosub_dma_ch1_intr" ||
-                interrupt_name == "iosub_dma_ch2_intr" ||
-                interrupt_name == "iosub_dma_ch3_intr" ||
-                interrupt_name == "iosub_dma_ch4_intr" ||
-                interrupt_name == "iosub_dma_ch5_intr" ||
-                interrupt_name == "iosub_dma_ch6_intr" ||
-                interrupt_name == "iosub_dma_ch7_intr" ||
-                interrupt_name == "iosub_dma_ch8_intr" ||
-                interrupt_name == "iosub_dma_ch9_intr" ||
-                interrupt_name == "iosub_dma_ch10_intr" ||
-                interrupt_name == "iosub_dma_ch11_intr" ||
-                interrupt_name == "iosub_dma_ch12_intr" ||
-                interrupt_name == "iosub_dma_ch13_intr" ||
-                interrupt_name == "iosub_dma_ch14_intr" ||
-                interrupt_name == "iosub_dma_ch15_intr" ||
-                // Include iosub_slv_err_intr as it's also merged into iosub_normal_intr
-                interrupt_name == "iosub_slv_err_intr");
+        foreach (interrupt_map[i]) begin
+            if (interrupt_map[i].name == interrupt_name) begin
+                if (interrupt_map[i].group == IOSUB) begin
+                    int idx = interrupt_map[i].index;
+                    if ((idx >= 0 && idx <= 9) || (idx >= 15 && idx <= 50)) begin
+                        `uvm_info("INT_ROUTING_MODEL", $sformatf("Identified as IOSUB normal interrupt source: %s (group=IOSUB, index=%0d)",
+                                  interrupt_name, idx), UVM_HIGH)
+                        return 1;
+                    end else begin
+                        `uvm_info("INT_ROUTING_MODEL", $sformatf("IOSUB interrupt but not normal range: %s (group=IOSUB, index=%0d)",
+                                  interrupt_name, idx), UVM_HIGH)
+                        return 0;
+                    end
+                end else begin
+                    return 0; // Not IOSUB group
+                end
+            end
+        end
+        return 0; // Interrupt not found
     endfunction
 
     // Function to get all expected destinations for an interrupt considering masks

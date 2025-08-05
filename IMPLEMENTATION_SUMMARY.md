@@ -7,12 +7,10 @@
 ### 核心问题
 在进行`iosub_normal_intr`汇聚源中断处理的时候，虽然这些中断在路由配置中不直接包含SCP和MCP路由，但是由于它们都被汇聚为`iosub_normal_intr`中断，因此在进行目的预测的时候还要同时考虑`iosub_normal_intr`是否分别经过scp和mcp的`iosub_normal_intr` mask可以被路由到MCP和SCP。
 
-**影响的中断包括**：
-- `iosub_slv_err_intr` (merge中断)
-- `iosub_pmbus0_intr`, `iosub_pmbus1_intr` (PMBUS中断)
-- `iosub_mem_ist_intr` (内存中断)
-- `iosub_dma_comreg_intr` (DMA通用寄存器中断)
-- `iosub_dma_ch0_intr` ~ `iosub_dma_ch15_intr` (DMA通道中断)
+**影响的中断范围**：
+- **IOSUB组中断**: `group == IOSUB`
+- **Index范围**: `[0,9]` 和 `[15,50]`
+- **自动识别**: 基于中断的group和index属性，无需硬编码中断名称
 
 ### 解决方案实现
 
@@ -45,14 +43,18 @@ function bit check_indirect_routing_via_merge(string interrupt_name, string dest
     end
 endfunction
 
+// Simple and elegant: based on IOSUB group and index ranges
 function bit is_iosub_normal_intr_source(string interrupt_name);
-    return (interrupt_name == "iosub_pmbus0_intr" ||
-            interrupt_name == "iosub_pmbus1_intr" ||
-            interrupt_name == "iosub_mem_ist_intr" ||
-            interrupt_name == "iosub_dma_comreg_intr" ||
-            interrupt_name == "iosub_dma_ch0_intr" ||
-            // ... all DMA channels ch0-ch15
-            interrupt_name == "iosub_slv_err_intr");
+    foreach (interrupt_map[i]) begin
+        if (interrupt_map[i].name == interrupt_name) begin
+            if (interrupt_map[i].group == IOSUB) begin
+                int idx = interrupt_map[i].index;
+                // IOSUB normal interrupt index ranges: [0,9] and [15,50]
+                return ((idx >= 0 && idx <= 9) || (idx >= 15 && idx <= 50));
+            end
+        end
+    end
+    return 0;
 endfunction
 ```
 
@@ -87,8 +89,9 @@ end
 ## 技术特点
 
 ### 1. 架构设计
-- **分层处理**: 支持多层merge中断的递归处理
-- **可扩展性**: 易于添加新的merge关系
+- **基于属性**: 使用中断的group和index属性进行判断，无需硬编码
+- **自动识别**: 所有符合IOSUB group + index范围[0,9]∪[15,50]的中断自动支持
+- **可扩展性**: 新增IOSUB normal中断无需修改代码，自动生效
 - **向后兼容**: 不影响现有的直接路由中断
 
 ### 2. 性能优化
