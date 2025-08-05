@@ -346,8 +346,8 @@ class int_routing_model extends uvm_object;
 
         `uvm_info("INT_ROUTING_MODEL", $sformatf("🔍 Checking indirect routing for '%s' to '%s' via merge aggregation", interrupt_name, destination), UVM_HIGH)
 
-        // Special case: iosub_slv_err_intr is merged into iosub_normal_intr
-        if (interrupt_name == "iosub_slv_err_intr") begin
+        // Check if this interrupt is a source for iosub_normal_intr
+        if (is_iosub_normal_intr_source(interrupt_name)) begin
             // Check if iosub_normal_intr has routing to the destination
             foreach (interrupt_map[i]) begin
                 if (interrupt_map[i].name == "iosub_normal_intr") begin
@@ -374,6 +374,33 @@ class int_routing_model extends uvm_object;
         // For example, other interrupts that are merged into higher-level merge signals
 
         return has_indirect_routing;
+    endfunction
+
+    // Function to check if an interrupt is a source for iosub_normal_intr merge
+    function bit is_iosub_normal_intr_source(string interrupt_name);
+        return (interrupt_name == "iosub_pmbus0_intr" ||
+                interrupt_name == "iosub_pmbus1_intr" ||
+                interrupt_name == "iosub_mem_ist_intr" ||
+                interrupt_name == "iosub_dma_comreg_intr" ||
+                // All DMAC channel interrupts (ch0-ch15)
+                interrupt_name == "iosub_dma_ch0_intr" ||
+                interrupt_name == "iosub_dma_ch1_intr" ||
+                interrupt_name == "iosub_dma_ch2_intr" ||
+                interrupt_name == "iosub_dma_ch3_intr" ||
+                interrupt_name == "iosub_dma_ch4_intr" ||
+                interrupt_name == "iosub_dma_ch5_intr" ||
+                interrupt_name == "iosub_dma_ch6_intr" ||
+                interrupt_name == "iosub_dma_ch7_intr" ||
+                interrupt_name == "iosub_dma_ch8_intr" ||
+                interrupt_name == "iosub_dma_ch9_intr" ||
+                interrupt_name == "iosub_dma_ch10_intr" ||
+                interrupt_name == "iosub_dma_ch11_intr" ||
+                interrupt_name == "iosub_dma_ch12_intr" ||
+                interrupt_name == "iosub_dma_ch13_intr" ||
+                interrupt_name == "iosub_dma_ch14_intr" ||
+                interrupt_name == "iosub_dma_ch15_intr" ||
+                // Include iosub_slv_err_intr as it's also merged into iosub_normal_intr
+                interrupt_name == "iosub_slv_err_intr");
     endfunction
 
     // Function to get all expected destinations for an interrupt considering masks

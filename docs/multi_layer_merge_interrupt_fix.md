@@ -2,28 +2,37 @@
 
 ## 问题描述
 
-在进行`iosub_slv_err_intr`类型merge类中断处理的时候，虽然路由方向中不包含SCP和MCP，但是由于`iosub_slv_err_intr`进一步的被汇聚为`iosub_normal_intr`中断，因此在进行目的预测的时候还要同时考虑`iosub_normal_intr`是否分别经过scp和mcp的`iosub_normal_intr` mask可以被路由到MCP和SCP。
+在进行`iosub_normal_intr`汇聚源中断处理的时候，虽然这些中断在路由配置中不直接包含SCP和MCP路由，但是由于它们都被汇聚为`iosub_normal_intr`中断，因此在进行目的预测的时候还要同时考虑`iosub_normal_intr`是否分别经过scp和mcp的`iosub_normal_intr` mask可以被路由到MCP和SCP。
+
+**影响的中断包括**：
+- `iosub_slv_err_intr` (merge中断，进一步汇聚USB相关中断)
+- `iosub_pmbus0_intr`, `iosub_pmbus1_intr` (PMBUS中断)
+- `iosub_mem_ist_intr` (内存中断)
+- `iosub_dma_comreg_intr` (DMA通用寄存器中断)
+- `iosub_dma_ch0_intr` ~ `iosub_dma_ch15_intr` (DMA通道中断)
 
 ## 问题分析
 
 ### 中断汇聚层次结构
 
 ```
-iosub_slv_err_intr (merge interrupt)
-├── usb0_apb1ton_intr
-├── usb1_apb1ton_intr  
-└── usb_top_apb1ton_intr
-    ↓ (进一步汇聚)
-iosub_normal_intr (higher-level merge interrupt)
-├── iosub_slv_err_intr
-├── iosub_pmbus0_intr
-├── iosub_pmbus1_intr
-├── iosub_mem_ist_intr
-├── iosub_dma_comreg_intr
-├── iosub_dma_ch0_intr ~ iosub_dma_ch15_intr
-└── ... (其他IOSUB normal中断)
-    ↓ (路由到目标)
-SCP/MCP (最终目标)
+多个IOSUB中断源
+├── iosub_pmbus0_intr ────────────┐
+├── iosub_pmbus1_intr ────────────┤
+├── iosub_mem_ist_intr ───────────┤
+├── iosub_dma_comreg_intr ────────┤
+├── iosub_dma_ch0_intr ───────────┤
+├── iosub_dma_ch1_intr ───────────┤
+├── ... (ch2-ch15) ──────────────┤
+├── iosub_slv_err_intr ───────────┤ (这本身也是merge中断)
+│   ├── usb0_apb1ton_intr ────────┤
+│   ├── usb1_apb1ton_intr ────────┤
+│   └── usb_top_apb1ton_intr ─────┤
+└── ... (其他IOSUB normal中断) ───┤
+                                  ↓ (全部汇聚到)
+                        iosub_normal_intr (高层merge中断)
+                                  ↓ (路由到目标)
+                            SCP/MCP (最终目标)
 ```
 
 ### 原有问题

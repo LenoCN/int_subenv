@@ -229,14 +229,14 @@ class int_register_model extends uvm_object;
         `uvm_info("INT_REG_MODEL", $sformatf("🔍 Checking mask status for interrupt '%s' to destination '%s'",
                   interrupt_name, destination), UVM_HIGH)
 
-        // Special handling for merge interrupts that route indirectly via other merge interrupts
-        // For example: iosub_slv_err_intr → iosub_normal_intr → SCP/MCP
-        if (interrupt_name == "iosub_slv_err_intr" && (destination.toupper() == "SCP" || destination.toupper() == "MCP")) begin
+        // Special handling for merge interrupts that route indirectly via iosub_normal_intr
+        // All iosub_normal_intr sources route indirectly: source → iosub_normal_intr → SCP/MCP
+        if (is_iosub_normal_intr_source(interrupt_name, routing_model) && (destination.toupper() == "SCP" || destination.toupper() == "MCP")) begin
             `uvm_info("INT_REG_MODEL", $sformatf("🔗 Special handling: %s routes indirectly to %s via iosub_normal_intr",
                       interrupt_name, destination), UVM_HIGH)
 
-            // For iosub_slv_err_intr routing to SCP/MCP, we need to check:
-            // 1. iosub_normal_intr mask (since iosub_slv_err_intr is merged into it)
+            // For all iosub_normal_intr sources routing to SCP/MCP, we need to check:
+            // 1. iosub_normal_intr mask (since the source is merged into it)
             // 2. The general SCP/MCP mask for iosub_normal_intr
 
             // Check if iosub_normal_intr itself would be masked to this destination
@@ -878,8 +878,35 @@ class int_register_model extends uvm_object;
             end
         end
 
-        `uvm_info("INT_REG_MODEL", "✅ ACCEL UART and DMA interrupt routing update completed", UVM_MEDIUM)
+        `uvm_info("INT_REG_MODEL", "ACCEL UART and DMA interrupt routing update completed", UVM_MEDIUM)
     endtask
+
+    // Function to check if an interrupt is a source for iosub_normal_intr merge
+    function bit is_iosub_normal_intr_source(string interrupt_name, int_routing_model routing_model);
+        return (interrupt_name == "iosub_pmbus0_intr" ||
+                interrupt_name == "iosub_pmbus1_intr" ||
+                interrupt_name == "iosub_mem_ist_intr" ||
+                interrupt_name == "iosub_dma_comreg_intr" ||
+                // All DMAC channel interrupts (ch0-ch15)
+                interrupt_name == "iosub_dma_ch0_intr" ||
+                interrupt_name == "iosub_dma_ch1_intr" ||
+                interrupt_name == "iosub_dma_ch2_intr" ||
+                interrupt_name == "iosub_dma_ch3_intr" ||
+                interrupt_name == "iosub_dma_ch4_intr" ||
+                interrupt_name == "iosub_dma_ch5_intr" ||
+                interrupt_name == "iosub_dma_ch6_intr" ||
+                interrupt_name == "iosub_dma_ch7_intr" ||
+                interrupt_name == "iosub_dma_ch8_intr" ||
+                interrupt_name == "iosub_dma_ch9_intr" ||
+                interrupt_name == "iosub_dma_ch10_intr" ||
+                interrupt_name == "iosub_dma_ch11_intr" ||
+                interrupt_name == "iosub_dma_ch12_intr" ||
+                interrupt_name == "iosub_dma_ch13_intr" ||
+                interrupt_name == "iosub_dma_ch14_intr" ||
+                interrupt_name == "iosub_dma_ch15_intr" ||
+                // Include iosub_slv_err_intr as it's also merged into iosub_normal_intr
+                interrupt_name == "iosub_slv_err_intr");
+    endfunction
 
 endclass
 

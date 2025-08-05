@@ -5,7 +5,14 @@
 ✅ **成功实现了多层merge中断的路由预测功能**
 
 ### 核心问题
-在进行`iosub_slv_err_intr`类型merge类中断处理的时候，虽然路由方向中不包含SCP和MCP，但是由于`iosub_slv_err_intr`进一步的被汇聚为`iosub_normal_intr`中断，因此在进行目的预测的时候还要同时考虑`iosub_normal_intr`是否分别经过scp和mcp的`iosub_normal_intr` mask可以被路由到MCP和SCP。
+在进行`iosub_normal_intr`汇聚源中断处理的时候，虽然这些中断在路由配置中不直接包含SCP和MCP路由，但是由于它们都被汇聚为`iosub_normal_intr`中断，因此在进行目的预测的时候还要同时考虑`iosub_normal_intr`是否分别经过scp和mcp的`iosub_normal_intr` mask可以被路由到MCP和SCP。
+
+**影响的中断包括**：
+- `iosub_slv_err_intr` (merge中断)
+- `iosub_pmbus0_intr`, `iosub_pmbus1_intr` (PMBUS中断)
+- `iosub_mem_ist_intr` (内存中断)
+- `iosub_dma_comreg_intr` (DMA通用寄存器中断)
+- `iosub_dma_ch0_intr` ~ `iosub_dma_ch15_intr` (DMA通道中断)
 
 ### 解决方案实现
 
@@ -31,11 +38,21 @@ end
 **关键逻辑**:
 ```systemverilog
 function bit check_indirect_routing_via_merge(string interrupt_name, string destination);
-    // Special case: iosub_slv_err_intr is merged into iosub_normal_intr
-    if (interrupt_name == "iosub_slv_err_intr") begin
+    // Check if this interrupt is a source for iosub_normal_intr
+    if (is_iosub_normal_intr_source(interrupt_name)) begin
         // Check if iosub_normal_intr has routing to the destination
         // Return routing status based on iosub_normal_intr configuration
     end
+endfunction
+
+function bit is_iosub_normal_intr_source(string interrupt_name);
+    return (interrupt_name == "iosub_pmbus0_intr" ||
+            interrupt_name == "iosub_pmbus1_intr" ||
+            interrupt_name == "iosub_mem_ist_intr" ||
+            interrupt_name == "iosub_dma_comreg_intr" ||
+            interrupt_name == "iosub_dma_ch0_intr" ||
+            // ... all DMA channels ch0-ch15
+            interrupt_name == "iosub_slv_err_intr");
 endfunction
 ```
 
@@ -47,8 +64,9 @@ endfunction
 
 **关键代码**:
 ```systemverilog
-// Special handling for merge interrupts that route indirectly
-if (interrupt_name == "iosub_slv_err_intr" && (destination.toupper() == "SCP" || destination.toupper() == "MCP")) begin
+// Special handling for all iosub_normal_intr sources that route indirectly
+if (is_iosub_normal_intr_source(interrupt_name, routing_model) &&
+    (destination.toupper() == "SCP" || destination.toupper() == "MCP")) begin
     // Check if iosub_normal_intr itself would be masked to this destination
     bit iosub_normal_masked = is_interrupt_masked("iosub_normal_intr", destination, routing_model);
     return iosub_normal_masked; // Use iosub_normal_intr's mask status
@@ -113,23 +131,28 @@ end
 
 ### 1. 激励测试
 ```systemverilog
-// 激励iosub_slv_err_intr的源中断
-stimulate_interrupt("usb0_apb1ton_intr");
+// 激励任何iosub_normal_intr汇聚源中断
+stimulate_interrupt("iosub_pmbus0_intr");     // PMBUS中断
+stimulate_interrupt("iosub_dma_ch0_intr");    // DMA通道中断
+stimulate_interrupt("usb0_apb1ton_intr");     // USB中断(通过iosub_slv_err_intr)
 // 系统会自动检测到SCP/MCP的间接路由
 ```
 
 ### 2. 路由预测
 ```systemverilog
-// 检查间接路由
-bit routing_enabled = routing_model.predict_interrupt_routing_with_mask("iosub_slv_err_intr", "SCP", register_model);
-// 返回true如果通过iosub_normal_intr可以路由到SCP
+// 检查各种iosub_normal_intr源的间接路由
+bit pmbus_routing = routing_model.predict_interrupt_routing_with_mask("iosub_pmbus0_intr", "SCP", register_model);
+bit dma_routing = routing_model.predict_interrupt_routing_with_mask("iosub_dma_ch0_intr", "MCP", register_model);
+bit slv_err_routing = routing_model.predict_interrupt_routing_with_mask("iosub_slv_err_intr", "SCP", register_model);
+// 所有这些都会返回true如果通过iosub_normal_intr可以路由到目标
 ```
 
 ### 3. Mask控制
 ```systemverilog
-// 设置iosub_normal_intr的mask会影响iosub_slv_err_intr的路由
+// 设置iosub_normal_intr的mask会影响所有汇聚源的路由
 register_model.set_mask("iosub_normal_intr", "SCP", 1); // 屏蔽
-// iosub_slv_err_intr到SCP的路由也会被屏蔽
+// 所有iosub_normal_intr汇聚源到SCP的路由都会被屏蔽
+// 包括: iosub_pmbus0_intr, iosub_dma_ch0_intr, iosub_slv_err_intr等
 ```
 
 ## 未来扩展
