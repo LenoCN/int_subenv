@@ -489,6 +489,87 @@ class int_routing_model extends uvm_object;
         `uvm_info("INT_ROUTING_MODEL", "=== End Routing Prediction ===", UVM_MEDIUM)
     endfunction
 
+    // High-level function to check if an interrupt should trigger merge interrupt expectation
+    // This encapsulates the logic for different merge interrupt types
+    function bit should_trigger_merge_expectation(string interrupt_name, string merge_name, int_register_model register_model);
+        `uvm_info("INT_ROUTING_MODEL", $sformatf("🔍 Checking if interrupt '%s' should trigger merge expectation for '%s'", interrupt_name, merge_name), UVM_HIGH)
+
+        // Check if interrupt is actually a source for this merge
+        interrupt_info_s sources[];
+        int num_sources = get_merge_sources(merge_name, sources);
+        bit is_source = 0;
+
+        foreach (sources[i]) begin
+            if (sources[i].name == interrupt_name) begin
+                is_source = 1;
+                break;
+            end
+        end
+
+        if (!is_source) begin
+            `uvm_info("INT_ROUTING_MODEL", $sformatf("❌ Interrupt '%s' is not a source for merge '%s'", interrupt_name, merge_name), UVM_HIGH)
+            return 0;
+        end
+
+        // Use register model's high-level interface for mask checking
+        return register_model.should_expect_merge_interrupt(merge_name, interrupt_name, this);
+    endfunction
+
+    // High-level function to get merge interrupt info by name
+    function bit get_merge_interrupt_info(string merge_name, ref interrupt_info_s merge_info);
+        foreach (interrupt_map[i]) begin
+            if (interrupt_map[i].name == merge_name) begin
+                merge_info = interrupt_map[i];
+                `uvm_info("INT_ROUTING_MODEL", $sformatf("✅ Found merge interrupt info for '%s'", merge_name), UVM_HIGH)
+                return 1;
+            end
+        end
+        `uvm_info("INT_ROUTING_MODEL", $sformatf("❌ Merge interrupt '%s' not found", merge_name), UVM_MEDIUM)
+        return 0;
+    endfunction
+
+    // High-level function to check if any source should trigger merge expectation
+    function bit should_any_source_trigger_merge(string merge_name, interrupt_info_s source_interrupts[], int_register_model register_model);
+        return register_model.should_expect_merge_from_any_source(merge_name, source_interrupts, this);
+    endfunction
+
+    // High-level function to get all merge interrupts that a source interrupt contributes to
+    function void get_merge_interrupts_for_source(string source_name, ref string merge_interrupts[$]);
+        string all_merge_names[$] = {
+            "iosub_normal_intr",
+            "iosub_slv_err_intr",
+            "iosub_ras_cri_intr",
+            "iosub_ras_unc_intr",
+            "iosub_abnormal_0_intr",
+            "iosub_abnormal_1_intr",
+            "pll_intr"
+        };
+
+        `uvm_info("INT_ROUTING_MODEL", $sformatf("🔍 Finding merge interrupts for source: %s", source_name), UVM_HIGH)
+
+        merge_interrupts.delete();
+
+        foreach (all_merge_names[i]) begin
+            interrupt_info_s sources[];
+            int num_sources = get_merge_sources(all_merge_names[i], sources);
+
+            // Check if source_name is in the sources list
+            foreach (sources[j]) begin
+                if (sources[j].name == source_name) begin
+                    merge_interrupts.push_back(all_merge_names[i]);
+                    `uvm_info("INT_ROUTING_MODEL", $sformatf("✅ Found merge interrupt: %s for source: %s", all_merge_names[i], source_name), UVM_HIGH)
+                    break;
+                end
+            end
+        end
+
+        if (merge_interrupts.size() == 0) begin
+            `uvm_info("INT_ROUTING_MODEL", $sformatf("📋 No merge interrupts found for source: %s", source_name), UVM_HIGH)
+        end else begin
+            `uvm_info("INT_ROUTING_MODEL", $sformatf("✅ Found %0d merge interrupt(s) for source: %s", merge_interrupts.size(), source_name), UVM_MEDIUM)
+        end
+    endfunction
+
 endclass
 
 `endif // INT_ROUTING_MODEL_SV

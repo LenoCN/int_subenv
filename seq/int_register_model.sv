@@ -905,6 +905,76 @@ class int_register_model extends uvm_object;
         return 0; // Interrupt not found
     endfunction
 
+    // High-level function to check if a merge interrupt should be expected
+    // considering source interrupt mask status
+    function bit should_expect_merge_interrupt(string merge_name, string source_name, int_routing_model routing_model);
+        `uvm_info("INT_REG_MODEL", $sformatf("🔍 Checking if merge interrupt '%s' should be expected from source '%s'", merge_name, source_name), UVM_HIGH)
+
+        // Special handling for iosub_normal_intr
+        if (merge_name == "iosub_normal_intr") begin
+            // Check if source is an iosub_normal_intr source
+            if (!is_iosub_normal_intr_source(source_name, routing_model)) begin
+                `uvm_info("INT_REG_MODEL", $sformatf("❌ Source '%s' is not an iosub_normal_intr source", source_name), UVM_HIGH)
+                return 0;
+            end
+
+            // Get iosub_normal_intr routing info
+            interrupt_info_s merge_info;
+            bit found_merge = 0;
+            foreach (routing_model.interrupt_map[i]) begin
+                if (routing_model.interrupt_map[i].name == merge_name) begin
+                    merge_info = routing_model.interrupt_map[i];
+                    found_merge = 1;
+                    break;
+                end
+            end
+
+            if (!found_merge) begin
+                `uvm_info("INT_REG_MODEL", $sformatf("❌ Merge interrupt '%s' not found in routing model", merge_name), UVM_MEDIUM)
+                return 0;
+            end
+
+            // Check if source passes IOSUB Normal mask layer for any destination that merge routes to
+            if (merge_info.to_scp) begin
+                if (!check_iosub_normal_mask_layer(source_name, "SCP", routing_model)) begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("✅ Source '%s' passes IOSUB Normal mask for SCP, expect merge '%s'", source_name, merge_name), UVM_HIGH)
+                    return 1;
+                end
+            end
+
+            if (merge_info.to_mcp) begin
+                if (!check_iosub_normal_mask_layer(source_name, "MCP", routing_model)) begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("✅ Source '%s' passes IOSUB Normal mask for MCP, expect merge '%s'", source_name, merge_name), UVM_HIGH)
+                    return 1;
+                end
+            end
+
+            `uvm_info("INT_REG_MODEL", $sformatf("🚫 Source '%s' is blocked by IOSUB Normal mask for all destinations, don't expect merge '%s'", source_name, merge_name), UVM_MEDIUM)
+            return 0;
+        end else begin
+            // For other merge interrupts, always expect if source has valid path
+            `uvm_info("INT_REG_MODEL", $sformatf("✅ Non-iosub_normal_intr merge '%s', expect from source '%s'", merge_name, source_name), UVM_HIGH)
+            return 1;
+        end
+    endfunction
+
+    // High-level function to check if any source in an array should trigger merge expectation
+    function bit should_expect_merge_from_any_source(string merge_name, interrupt_info_s source_interrupts[], int_routing_model routing_model);
+        `uvm_info("INT_REG_MODEL", $sformatf("🔍 Checking if merge interrupt '%s' should be expected from any of %0d sources", merge_name, source_interrupts.size()), UVM_HIGH)
+
+        foreach (source_interrupts[i]) begin
+            if (source_interrupts[i].rtl_path_src != "") begin
+                if (should_expect_merge_interrupt(merge_name, source_interrupts[i].name, routing_model)) begin
+                    `uvm_info("INT_REG_MODEL", $sformatf("✅ Found valid source '%s' for merge '%s'", source_interrupts[i].name, merge_name), UVM_HIGH)
+                    return 1;
+                end
+            end
+        end
+
+        `uvm_info("INT_REG_MODEL", $sformatf("🚫 No valid sources found for merge '%s'", merge_name), UVM_MEDIUM)
+        return 0;
+    endfunction
+
 endclass
 
 `endif // INT_REGISTER_MODEL_SV

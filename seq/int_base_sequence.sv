@@ -271,5 +271,274 @@ class int_base_sequence extends uvm_sequence;
         `uvm_info(get_type_name(), "=== END SEQUENCE EXPECTED INTERRUPT WITH MASK ===", UVM_MEDIUM)
     endfunction
 
+    // High-level function to add all expected interrupts for a given source interrupt
+    // This automatically handles both direct routing and merge routing expectations
+    function void add_all_expected_interrupts(interrupt_info_s source_info);
+        string merge_interrupts[$];
+        interrupt_info_s merge_info;
+
+        `uvm_info(get_type_name(), "=== ADDING ALL EXPECTED INTERRUPTS ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("Processing all routing paths for interrupt: %s", source_info.name), UVM_MEDIUM)
+
+        // 1. Always add expectation for the source interrupt itself (direct routing)
+        `uvm_info(get_type_name(), $sformatf("Adding direct routing expectation for: %s", source_info.name), UVM_HIGH)
+        add_expected_with_mask(source_info);
+
+        // 2. Check if this interrupt is a source for any merge interrupts
+        m_routing_model.get_merge_interrupts_for_source(source_info.name, merge_interrupts);
+
+        if (merge_interrupts.size() > 0) begin
+            `uvm_info(get_type_name(), $sformatf("Found %0d merge interrupt(s) for source: %s", merge_interrupts.size(), source_info.name), UVM_MEDIUM)
+
+            foreach (merge_interrupts[i]) begin
+                `uvm_info(get_type_name(), $sformatf("Checking merge interrupt: %s", merge_interrupts[i]), UVM_HIGH)
+
+                // Get merge interrupt info
+                if (m_routing_model.get_merge_interrupt_info(merge_interrupts[i], merge_info)) begin
+                    // Check if this source should trigger the merge interrupt expectation
+                    if (m_register_model.should_expect_merge_interrupt(merge_interrupts[i], source_info.name, m_routing_model)) begin
+                        `uvm_info(get_type_name(), $sformatf("Adding merge routing expectation: %s (from source: %s)", merge_interrupts[i], source_info.name), UVM_MEDIUM)
+                        add_expected_with_mask(merge_info);
+                    end else begin
+                        `uvm_info(get_type_name(), $sformatf("🚫 Skipping merge expectation: %s (source %s blocked by mask)", merge_interrupts[i], source_info.name), UVM_MEDIUM)
+                    end
+                end else begin
+                    `uvm_warning(get_type_name(), $sformatf("Could not find merge interrupt info for: %s", merge_interrupts[i]));
+                end
+            end
+        end else begin
+            `uvm_info(get_type_name(), $sformatf("No merge interrupts found for source: %s", source_info.name), UVM_HIGH)
+        end
+
+        `uvm_info(get_type_name(), "=== END ADDING ALL EXPECTED INTERRUPTS ===", UVM_MEDIUM)
+    endfunction
+
+    // High-level function to wait for all expected interrupts for a given source interrupt
+    // This automatically handles both direct routing and merge routing waits
+    task wait_for_all_expected_interrupts(interrupt_info_s source_info, int timeout_ns = -1);
+        string merge_interrupts[$];
+        interrupt_info_s merge_info;
+
+        `uvm_info(get_type_name(), "=== WAITING FOR ALL EXPECTED INTERRUPTS ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("Waiting for all routing paths for interrupt: %s", source_info.name), UVM_MEDIUM)
+
+        // 1. Check if this interrupt is a source for any merge interrupts and wait for them first
+        m_routing_model.get_merge_interrupts_for_source(source_info.name, merge_interrupts);
+
+        if (merge_interrupts.size() > 0) begin
+            `uvm_info(get_type_name(), $sformatf("Waiting for %0d merge interrupt(s) first", merge_interrupts.size()), UVM_MEDIUM)
+
+            foreach (merge_interrupts[i]) begin
+                if (m_routing_model.get_merge_interrupt_info(merge_interrupts[i], merge_info)) begin
+                    if (m_register_model.should_expect_merge_interrupt(merge_interrupts[i], source_info.name, m_routing_model)) begin
+                        `uvm_info(get_type_name(), $sformatf("Waiting for merge interrupt: %s (from source: %s)", merge_interrupts[i], source_info.name), UVM_MEDIUM)
+                        wait_for_interrupt_detection_with_mask(merge_info, timeout_ns);
+                    end else begin
+                        `uvm_info(get_type_name(), $sformatf("🚫 Skipping merge wait: %s (source %s blocked by mask)", merge_interrupts[i], source_info.name), UVM_MEDIUM)
+                    end
+                end
+            end
+        end
+
+        // 2. Wait for the source interrupt itself (direct routing)
+        `uvm_info(get_type_name(), $sformatf("Waiting for direct routing of source interrupt: %s", source_info.name), UVM_HIGH)
+        wait_for_interrupt_detection_with_mask(source_info, timeout_ns);
+
+        `uvm_info(get_type_name(), "=== END WAITING FOR ALL EXPECTED INTERRUPTS ===", UVM_MEDIUM)
+    endtask
+
+    // High-level function to update status for all related interrupts
+    task update_all_interrupt_status(interrupt_info_s source_info);
+        string merge_interrupts[$];
+
+        `uvm_info(get_type_name(), "=== UPDATING ALL INTERRUPT STATUS ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("Updating status for all routing paths for interrupt: %s", source_info.name), UVM_MEDIUM)
+
+        // 1. Update status for merge interrupts first
+        m_routing_model.get_merge_interrupts_for_source(source_info.name, merge_interrupts);
+
+        foreach (merge_interrupts[i]) begin
+            if (m_register_model.should_expect_merge_interrupt(merge_interrupts[i], source_info.name, m_routing_model)) begin
+                `uvm_info(get_type_name(), $sformatf("Updating merge interrupt status: %s (from source: %s)", merge_interrupts[i], source_info.name), UVM_HIGH)
+                m_routing_model.update_interrupt_status(merge_interrupts[i], 1, m_register_model);
+            end else begin
+                `uvm_info(get_type_name(), $sformatf("🚫 Skipping merge status update: %s (source %s blocked by mask)", merge_interrupts[i], source_info.name), UVM_HIGH)
+            end
+        end
+
+        // 2. Update status for the source interrupt itself
+        `uvm_info(get_type_name(), $sformatf("Updating source interrupt status: %s", source_info.name), UVM_HIGH)
+        m_routing_model.update_interrupt_status(source_info.name, 1, m_register_model);
+
+        `uvm_info(get_type_name(), "=== END UPDATING ALL INTERRUPT STATUS ===", UVM_MEDIUM)
+    endtask
+
+    // High-level function for merge interrupt testing - handles both merge and direct routing expectations
+    function void add_merge_test_expectations(interrupt_info_s merge_info, interrupt_info_s source_info);
+        bit source_has_direct_routing;
+
+        `uvm_info(get_type_name(), "=== ADDING MERGE TEST EXPECTATIONS ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("Processing merge test for: %s -> %s", source_info.name, merge_info.name), UVM_MEDIUM)
+
+        // 1. Add expectation for the merge interrupt if source should trigger it
+        if (m_routing_model.should_trigger_merge_expectation(source_info.name, merge_info.name, m_register_model)) begin
+            `uvm_info(get_type_name(), $sformatf("Adding merge expectation: %s (from source: %s)", merge_info.name, source_info.name), UVM_HIGH)
+            add_expected_with_mask(merge_info);
+        end else begin
+            `uvm_info(get_type_name(), $sformatf("🚫 Skipping merge expectation: %s (source %s blocked by mask)", merge_info.name, source_info.name), UVM_MEDIUM)
+        end
+
+        // 2. Check if source has direct routing (excluding SCP/MCP which are handled via merge)
+        source_has_direct_routing = (source_info.to_ap || source_info.to_accel || source_info.to_io || source_info.to_other_die);
+
+        if (source_has_direct_routing) begin
+            `uvm_info(get_type_name(), $sformatf("Adding direct routing expectation for source: %s", source_info.name), UVM_MEDIUM)
+            add_expected_with_mask(source_info);
+        end else begin
+            `uvm_info(get_type_name(), $sformatf("No direct routing for source: %s", source_info.name), UVM_HIGH)
+        end
+
+        `uvm_info(get_type_name(), "=== END ADDING MERGE TEST EXPECTATIONS ===", UVM_MEDIUM)
+    endfunction
+
+    // High-level task for merge interrupt testing - handles both merge and direct routing waits
+    task wait_for_merge_test_interrupts(interrupt_info_s merge_info, interrupt_info_s source_info, int timeout_ns = -1);
+        bit source_has_direct_routing;
+
+        `uvm_info(get_type_name(), "=== WAITING FOR MERGE TEST INTERRUPTS ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("Waiting for merge test: %s -> %s", source_info.name, merge_info.name), UVM_MEDIUM)
+
+        // 1. Wait for merge interrupt if source should trigger it
+        if (m_routing_model.should_trigger_merge_expectation(source_info.name, merge_info.name, m_register_model)) begin
+            `uvm_info(get_type_name(), $sformatf("Waiting for merge interrupt: %s (from source: %s)", merge_info.name, source_info.name), UVM_HIGH)
+            wait_for_interrupt_detection_with_mask(merge_info, timeout_ns);
+        end else begin
+            `uvm_info(get_type_name(), $sformatf("🚫 Skipping merge wait: %s (source %s blocked by mask)", merge_info.name, source_info.name), UVM_MEDIUM)
+        end
+
+        // 2. Wait for source direct routing if applicable
+        source_has_direct_routing = (source_info.to_ap || source_info.to_accel || source_info.to_io || source_info.to_other_die);
+
+        if (source_has_direct_routing) begin
+            `uvm_info(get_type_name(), $sformatf("Waiting for direct routing of source: %s", source_info.name), UVM_MEDIUM)
+            wait_for_interrupt_detection_with_mask(source_info, timeout_ns);
+        end
+
+        `uvm_info(get_type_name(), "=== END WAITING FOR MERGE TEST INTERRUPTS ===", UVM_MEDIUM)
+    endtask
+
+    // High-level task for merge interrupt testing - handles both merge and direct routing status updates
+    task update_merge_test_status(interrupt_info_s merge_info, interrupt_info_s source_info);
+        bit source_has_direct_routing;
+
+        `uvm_info(get_type_name(), "=== UPDATING MERGE TEST STATUS ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("Updating status for merge test: %s -> %s", source_info.name, merge_info.name), UVM_MEDIUM)
+
+        // 1. Update merge interrupt status if source should trigger it
+        if (m_routing_model.should_trigger_merge_expectation(source_info.name, merge_info.name, m_register_model)) begin
+            `uvm_info(get_type_name(), $sformatf("Updating merge interrupt status: %s (from source: %s)", merge_info.name, source_info.name), UVM_HIGH)
+            m_routing_model.update_interrupt_status(merge_info.name, 1, m_register_model);
+        end else begin
+            `uvm_info(get_type_name(), $sformatf("🚫 Skipping merge status update: %s (source %s blocked by mask)", merge_info.name, source_info.name), UVM_HIGH)
+        end
+
+        // 2. Update source status if it has direct routing
+        source_has_direct_routing = (source_info.to_ap || source_info.to_accel || source_info.to_io || source_info.to_other_die);
+
+        if (source_has_direct_routing) begin
+            `uvm_info(get_type_name(), $sformatf("Updating source interrupt status: %s", source_info.name), UVM_HIGH)
+            m_routing_model.update_interrupt_status(source_info.name, 1, m_register_model);
+        end
+
+        `uvm_info(get_type_name(), "=== END UPDATING MERGE TEST STATUS ===", UVM_MEDIUM)
+    endtask
+
+    // High-level function for multi-source merge interrupt testing
+    function void add_multi_source_merge_expectations(interrupt_info_s merge_info, interrupt_info_s source_interrupts[]);
+        `uvm_info(get_type_name(), "=== ADDING MULTI-SOURCE MERGE EXPECTATIONS ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("Processing multi-source merge test for: %s", merge_info.name), UVM_MEDIUM)
+
+        // 1. Add expectation for the merge interrupt if any source should trigger it
+        if (m_routing_model.should_any_source_trigger_merge(merge_info.name, source_interrupts, m_register_model)) begin
+            `uvm_info(get_type_name(), $sformatf("Adding merge expectation: %s (from multiple sources)", merge_info.name), UVM_HIGH)
+            add_expected_with_mask(merge_info);
+        end else begin
+            `uvm_info(get_type_name(), $sformatf("🚫 Skipping merge expectation: %s (all sources blocked by mask)", merge_info.name), UVM_MEDIUM)
+        end
+
+        // 2. Add expectations for source interrupts with direct routing
+        `uvm_info(get_type_name(), "Checking for source interrupts with direct routing", UVM_MEDIUM)
+        foreach (source_interrupts[i]) begin
+            if (source_interrupts[i].rtl_path_src != "") begin
+                bit source_has_direct_routing = (source_interrupts[i].to_ap || source_interrupts[i].to_accel ||
+                                                source_interrupts[i].to_io || source_interrupts[i].to_other_die);
+                if (source_has_direct_routing) begin
+                    `uvm_info(get_type_name(), $sformatf("Adding direct routing expectation for: %s", source_interrupts[i].name), UVM_MEDIUM)
+                    add_expected_with_mask(source_interrupts[i]);
+                end
+            end
+        end
+
+        `uvm_info(get_type_name(), "=== END ADDING MULTI-SOURCE MERGE EXPECTATIONS ===", UVM_MEDIUM)
+    endfunction
+
+    // High-level task for multi-source merge interrupt testing - waits
+    task wait_for_multi_source_merge_interrupts(interrupt_info_s merge_info, interrupt_info_s source_interrupts[], int timeout_ns = -1);
+        `uvm_info(get_type_name(), "=== WAITING FOR MULTI-SOURCE MERGE INTERRUPTS ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("Waiting for multi-source merge test: %s", merge_info.name), UVM_MEDIUM)
+
+        // 1. Wait for merge interrupt if any source should trigger it
+        if (m_routing_model.should_any_source_trigger_merge(merge_info.name, source_interrupts, m_register_model)) begin
+            `uvm_info(get_type_name(), $sformatf("Waiting for merge interrupt: %s (from multiple sources)", merge_info.name), UVM_HIGH)
+            wait_for_interrupt_detection_with_mask(merge_info, timeout_ns);
+        end else begin
+            `uvm_info(get_type_name(), $sformatf("🚫 Skipping merge wait: %s (all sources blocked by mask)", merge_info.name), UVM_MEDIUM)
+        end
+
+        // 2. Wait for source interrupts with direct routing
+        `uvm_info(get_type_name(), "Waiting for source interrupts with direct routing", UVM_MEDIUM)
+        foreach (source_interrupts[i]) begin
+            if (source_interrupts[i].rtl_path_src != "") begin
+                bit source_has_direct_routing = (source_interrupts[i].to_ap || source_interrupts[i].to_accel ||
+                                                source_interrupts[i].to_io || source_interrupts[i].to_other_die);
+                if (source_has_direct_routing) begin
+                    `uvm_info(get_type_name(), $sformatf("Waiting for direct routing of: %s", source_interrupts[i].name), UVM_MEDIUM)
+                    wait_for_interrupt_detection_with_mask(source_interrupts[i], timeout_ns);
+                end
+            end
+        end
+
+        `uvm_info(get_type_name(), "=== END WAITING FOR MULTI-SOURCE MERGE INTERRUPTS ===", UVM_MEDIUM)
+    endtask
+
+    // High-level task for multi-source merge interrupt testing - status updates
+    task update_multi_source_merge_status(interrupt_info_s merge_info, interrupt_info_s source_interrupts[]);
+        `uvm_info(get_type_name(), "=== UPDATING MULTI-SOURCE MERGE STATUS ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("Updating status for multi-source merge test: %s", merge_info.name), UVM_MEDIUM)
+
+        // 1. Update merge interrupt status if any source should trigger it
+        if (m_routing_model.should_any_source_trigger_merge(merge_info.name, source_interrupts, m_register_model)) begin
+            `uvm_info(get_type_name(), $sformatf("Updating merge interrupt status: %s (from multiple sources)", merge_info.name), UVM_HIGH)
+            m_routing_model.update_interrupt_status(merge_info.name, 1, m_register_model);
+        end else begin
+            `uvm_info(get_type_name(), $sformatf("🚫 Skipping merge status update: %s (all sources blocked by mask)", merge_info.name), UVM_HIGH)
+        end
+
+        // 2. Update status for source interrupts with direct routing
+        `uvm_info(get_type_name(), "Updating status for source interrupts with direct routing", UVM_MEDIUM)
+        foreach (source_interrupts[i]) begin
+            if (source_interrupts[i].rtl_path_src != "") begin
+                bit source_has_direct_routing = (source_interrupts[i].to_ap || source_interrupts[i].to_accel ||
+                                                source_interrupts[i].to_io || source_interrupts[i].to_other_die);
+                if (source_has_direct_routing) begin
+                    `uvm_info(get_type_name(), $sformatf("Updating status for: %s", source_interrupts[i].name), UVM_HIGH)
+                    m_routing_model.update_interrupt_status(source_interrupts[i].name, 1, m_register_model);
+                end
+            end
+        end
+
+        `uvm_info(get_type_name(), "=== END UPDATING MULTI-SOURCE MERGE STATUS ===", UVM_MEDIUM)
+    endtask
+
 endclass
 `endif
