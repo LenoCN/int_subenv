@@ -222,12 +222,7 @@ class int_monitor extends uvm_monitor;
         event_key = $sformatf("%s@%s", info.name, dest);
         int_event = interrupt_detected_events.get(event_key);
 
-        // Mark event as triggered first to handle race condition
-        if (event_manager != null) begin
-            event_manager.mark_event_triggered(event_key);
-        end
-
-        // Then trigger the event
+        // Trigger the event - race condition handled by wait_ptrigger() in event_manager
         int_event.trigger();
 
         `uvm_info(get_type_name(), $sformatf("✅ INTERRUPT DETECTED: '%s' -> '%s' (event: %s)",

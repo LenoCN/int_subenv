@@ -9,9 +9,7 @@ class int_event_manager extends uvm_object;
     // Event pool for interrupt detection handshake
     uvm_event_pool interrupt_event_pool;
 
-    // Track events that have been triggered to handle race conditions
-    // Key: event_key, Value: 1 if triggered
-    bit triggered_events[string];
+    // Note: Using wait_ptrigger() eliminates the need for manual race condition tracking
 
     function new(string name = "int_event_manager");
         super.new(name);
@@ -60,26 +58,13 @@ class int_event_manager extends uvm_object;
                   int_events.size(), info.name), UVM_HIGH)
 
         // Wait for all expected events to be triggered with timeout
-        // Fixed race condition: check if event was already triggered before waiting
+        // Use wait_ptrigger() to avoid race conditions - it can detect events triggered before or after the wait
         foreach (int_events[i]) begin
-            // Check if event was already triggered to avoid race condition
-            if (triggered_events.exists(event_keys[i]) && triggered_events[event_keys[i]]) begin
-                `uvm_info("INT_EVENT_MANAGER", $sformatf("Event already triggered for %s (race condition avoided)",
-                          event_keys[i]), UVM_HIGH)
-                // Clear the triggered flag for this event
-                triggered_events[event_keys[i]] = 0;
-                continue; // Event already triggered, skip waiting
-            end
-
             fork
                 begin
-                    int_events[i].wait_trigger();
+                    int_events[i].wait_ptrigger();
                     `uvm_info("INT_EVENT_MANAGER", $sformatf("Handshake: Received detection event for %s",
                               event_keys[i]), UVM_HIGH)
-                    // Clear the triggered flag after successful wait
-                    if (triggered_events.exists(event_keys[i])) begin
-                        triggered_events[event_keys[i]] = 0;
-                    end
                 end
                 begin
                     #(timeout_ns * 1ns);
@@ -98,17 +83,9 @@ class int_event_manager extends uvm_object;
                       info.name), UVM_MEDIUM)
         end
     endtask
-    
-    // Mark an event as triggered (called by monitor to handle race conditions)
-    function void mark_event_triggered(string event_key);
-        triggered_events[event_key] = 1;
-        `uvm_info("INT_EVENT_MANAGER", $sformatf("Marked event as triggered: %s", event_key), UVM_DEBUG)
-    endfunction
 
-    // Check if an event was already triggered
-    function bit is_event_triggered(string event_key);
-        return (triggered_events.exists(event_key) && triggered_events[event_key]);
-    endfunction
+    // Note: mark_event_triggered() and is_event_triggered() methods removed
+    // as they are no longer needed with wait_ptrigger() approach
 
     // Get the event pool
     function uvm_event_pool get_event_pool();
