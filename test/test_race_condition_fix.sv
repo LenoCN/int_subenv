@@ -1,7 +1,7 @@
 `ifndef TEST_RACE_CONDITION_FIX_SV
 `define TEST_RACE_CONDITION_FIX_SV
 
-// Test to verify the race condition fix between trigger and wait_trigger
+// Test to verify the race condition fix using wait_ptrigger()
 class test_race_condition_fix extends uvm_test;
     `uvm_component_utils(test_race_condition_fix)
     
