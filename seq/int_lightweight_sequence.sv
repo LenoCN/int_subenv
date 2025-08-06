@@ -112,8 +112,6 @@ class int_lightweight_sequence extends int_base_sequence;
     // Test a single interrupt using the driver
     virtual task test_single_interrupt(interrupt_info_s info);
         int_stimulus_item stim_item;
-        bit is_iosub_normal_source = 0;
-        interrupt_info_s iosub_normal_info;
 
         `uvm_info(get_type_name(), $sformatf("Testing single interrupt: %s", info.name), UVM_MEDIUM)
 
@@ -130,30 +128,9 @@ class int_lightweight_sequence extends int_base_sequence;
         `uvm_info(get_type_name(), $sformatf("RTL source path for interrupt %s: %s",
                  info.name, info.rtl_path_src), UVM_HIGH)
 
-        // CRITICAL FIX: Check if this interrupt is an iosub_normal_intr aggregation source
-        is_iosub_normal_source = m_routing_model.is_iosub_normal_intr_source(info.name);
-
-        if (is_iosub_normal_source) begin
-            `uvm_info(get_type_name(), $sformatf("SINGLE INTERRUPT DUAL ROUTING: %s is iosub_normal_intr source",
-                     info.name), UVM_MEDIUM)
-
-            // Get iosub_normal_intr info for merge expectation
-            foreach (m_routing_model.interrupt_map[i]) begin
-                if (m_routing_model.interrupt_map[i].name == "iosub_normal_intr") begin
-                    iosub_normal_info = m_routing_model.interrupt_map[i];
-                    break;
-                end
-            end
-
-            // Register expectation for iosub_normal_intr (merge routing to SCP/MCP)
-            `uvm_info(get_type_name(), $sformatf("SINGLE INTERRUPT DUAL ROUTING: Registering iosub_normal_intr expectation for source: %s",
-                     info.name), UVM_MEDIUM)
-            add_expected_with_mask(iosub_normal_info);
-        end
-
-        // Register expectations for the source interrupt itself (direct routing)
-        `uvm_info(get_type_name(), $sformatf("Registering expected interrupt with mask consideration: %s", info.name), UVM_HIGH)
-        add_expected_with_mask(info);
+        // REFACTORED: Use high-level interface to handle all routing paths automatically
+        `uvm_info(get_type_name(), $sformatf("Adding all expected interrupts for: %s", info.name), UVM_MEDIUM)
+        add_all_expected_interrupts(info);
 
         // Create and send stimulus item to driver
         `uvm_info(get_type_name(), $sformatf("Creating ASSERT stimulus for interrupt: %s", info.name), UVM_HIGH)
@@ -163,31 +140,16 @@ class int_lightweight_sequence extends int_base_sequence;
         start_item(stim_item);
         finish_item(stim_item);
 
-        // CRITICAL FIX: Wait for BOTH direct routing AND merge routing (if applicable)
-        if (is_iosub_normal_source) begin
-            `uvm_info(get_type_name(), "Waiting for propagation through merge logic", UVM_DEBUG)
-            #10ns; // Wait for propagation through merge logic
+        // REFACTORED: Use high-level interface to wait for all routing paths automatically
+        `uvm_info(get_type_name(), "Waiting for propagation through merge logic", UVM_DEBUG)
+        #10ns; // Wait for propagation through merge logic
 
-            // Wait for iosub_normal_intr merge interrupt detection first
-            `uvm_info(get_type_name(), $sformatf("SINGLE INTERRUPT DUAL ROUTING: Waiting for iosub_normal_intr detection from source: %s",
-                     info.name), UVM_MEDIUM)
-            wait_for_interrupt_detection_with_mask(iosub_normal_info);
-        end
+        `uvm_info(get_type_name(), $sformatf("Waiting for all expected interrupts for: %s", info.name), UVM_MEDIUM)
+        wait_for_all_expected_interrupts(info);
 
-        `uvm_info(get_type_name(), $sformatf("Waiting for detection of interrupt: %s", info.name), UVM_HIGH)
-        // Wait for interrupt to be detected by monitor using mask-aware approach for consistency
-        wait_for_interrupt_detection_with_mask(info);
-
-        // CRITICAL FIX: Update status for BOTH interrupts (if applicable)
-        if (is_iosub_normal_source) begin
-            // Update iosub_normal_intr status
-            `uvm_info(get_type_name(), $sformatf("SINGLE INTERRUPT DUAL ROUTING: Updating iosub_normal_intr status from source: %s",
-                     info.name), UVM_HIGH)
-            m_routing_model.update_interrupt_status("iosub_normal_intr", 1, m_register_model);
-        end
-
-        // Update status register to reflect source interrupt occurrence
-        m_routing_model.update_interrupt_status(info.name, 1, m_register_model);
+        // REFACTORED: Use high-level interface to update all interrupt status automatically
+        `uvm_info(get_type_name(), $sformatf("Updating all interrupt status for: %s", info.name), UVM_HIGH)
+        update_all_interrupt_status(info);
 
         // Send clear command to driver (simulates software clearing)
         `uvm_info(get_type_name(), $sformatf("Creating CLEAR stimulus for interrupt: %s", info.name), UVM_HIGH)
@@ -246,7 +208,6 @@ class int_lightweight_sequence extends int_base_sequence;
     // Test single merge source using driver
     virtual task test_merge_source(interrupt_info_s merge_info, interrupt_info_s source_info);
         int_stimulus_item stim_item;
-        bit source_has_direct_routing = 0;
 
         `uvm_info(get_type_name(), $sformatf("Testing merge source: %s -> %s", source_info.name, merge_info.name), UVM_MEDIUM)
 
@@ -263,24 +224,9 @@ class int_lightweight_sequence extends int_base_sequence;
         `uvm_info(get_type_name(), $sformatf("RTL source path for merge source %s: %s",
                  source_info.name, source_info.rtl_path_src), UVM_HIGH)
 
-        // Check if source interrupt has its own direct routing (excluding SCP/MCP which are handled via merge)
-        source_has_direct_routing = (source_info.to_ap || source_info.to_accel || source_info.to_io || source_info.to_other_die);
-
-        `uvm_info(get_type_name(), $sformatf("Source interrupt %s direct routing: AP=%b, ACCEL=%b, IO=%b, OTHER_DIE=%b (has_direct=%b)",
-                 source_info.name, source_info.to_ap, source_info.to_accel, source_info.to_io, source_info.to_other_die, source_has_direct_routing), UVM_HIGH)
-
-        // Register expectation for the merge interrupt (for SCP/MCP routing via iosub_normal_intr)
-        `uvm_info(get_type_name(), $sformatf("Registering expected merge interrupt with mask: %s (from source: %s)",
-                 merge_info.name, source_info.name), UVM_HIGH)
-        add_expected_with_mask(merge_info);
-
-        // CRITICAL FIX: Also register expectation for source interrupt's direct routing
-        // This ensures we expect responses for both merge routing (SCP/MCP) AND direct routing (AP/ACCEL/etc)
-        if (source_has_direct_routing) begin
-            `uvm_info(get_type_name(), $sformatf("DUAL EXPECTATION: Registering expected source interrupt with direct routing: %s",
-                     source_info.name), UVM_MEDIUM)
-            add_expected_with_mask(source_info);
-        end
+        // REFACTORED: Use high-level interface to handle all merge test expectations
+        `uvm_info(get_type_name(), $sformatf("Adding merge test expectations for: %s -> %s", source_info.name, merge_info.name), UVM_MEDIUM)
+        add_merge_test_expectations(merge_info, source_info);
 
         // Send stimulus for source interrupt
         `uvm_info(get_type_name(), $sformatf("Creating ASSERT stimulus for source interrupt: %s", source_info.name), UVM_HIGH)
@@ -293,27 +239,13 @@ class int_lightweight_sequence extends int_base_sequence;
         `uvm_info(get_type_name(), "Waiting for propagation through merge logic", UVM_DEBUG)
         #10ns; // Wait for propagation through merge logic
 
-        // CRITICAL FIX: Wait for BOTH merge interrupt AND source interrupt direct routing
-        // Wait for merge interrupt to be detected (for SCP/MCP routing)
-        `uvm_info(get_type_name(), $sformatf("Waiting for detection of merge interrupt: %s", merge_info.name), UVM_HIGH)
-        wait_for_interrupt_detection_with_mask(merge_info);
+        // REFACTORED: Use high-level interface to wait for all merge test interrupts
+        `uvm_info(get_type_name(), $sformatf("Waiting for merge test interrupts: %s -> %s", source_info.name, merge_info.name), UVM_MEDIUM)
+        wait_for_merge_test_interrupts(merge_info, source_info);
 
-        // DUAL DETECTION: Also wait for source interrupt's direct routing (for AP/ACCEL/etc)
-        if (source_has_direct_routing) begin
-            `uvm_info(get_type_name(), $sformatf("DUAL DETECTION: Waiting for detection of source interrupt direct routing: %s",
-                     source_info.name), UVM_MEDIUM)
-            wait_for_interrupt_detection_with_mask(source_info);
-        end
-
-        // Update status register to reflect merge interrupt occurrence
-        m_routing_model.update_interrupt_status(merge_info.name, 1, m_register_model);
-
-        // DUAL STATUS UPDATE: Also update source interrupt status if it has direct routing
-        if (source_has_direct_routing) begin
-            `uvm_info(get_type_name(), $sformatf("DUAL STATUS: Updating status for source interrupt direct routing: %s",
-                     source_info.name), UVM_HIGH)
-            m_routing_model.update_interrupt_status(source_info.name, 1, m_register_model);
-        end
+        // REFACTORED: Use high-level interface to update all merge test status
+        `uvm_info(get_type_name(), $sformatf("Updating merge test status: %s -> %s", source_info.name, merge_info.name), UVM_HIGH)
+        update_merge_test_status(merge_info, source_info);
 
         // Clear the source interrupt
         `uvm_info(get_type_name(), $sformatf("Creating CLEAR stimulus for source interrupt: %s", source_info.name), UVM_HIGH)
@@ -360,24 +292,9 @@ class int_lightweight_sequence extends int_base_sequence;
             return;
         end
 
-        // Register expectation for the merge interrupt with mask consideration
-        `uvm_info(get_type_name(), $sformatf("Registering expected merge interrupt with mask: %s for multi-source test",
-                 merge_info.name), UVM_HIGH)
-        add_expected_with_mask(merge_info);
-
-        // CRITICAL FIX: Also register expectations for source interrupts with direct routing
-        `uvm_info(get_type_name(), "MULTI-SOURCE DUAL EXPECTATION: Checking for source interrupts with direct routing", UVM_MEDIUM)
-        foreach (source_interrupts[i]) begin
-            if (source_interrupts[i].rtl_path_src != "") begin
-                bit source_has_direct_routing = (source_interrupts[i].to_ap || source_interrupts[i].to_accel ||
-                                                source_interrupts[i].to_io || source_interrupts[i].to_other_die);
-                if (source_has_direct_routing) begin
-                    `uvm_info(get_type_name(), $sformatf("MULTI-SOURCE DUAL EXPECTATION: Registering direct routing expectation for: %s",
-                             source_interrupts[i].name), UVM_MEDIUM)
-                    add_expected_with_mask(source_interrupts[i]);
-                end
-            end
-        end
+        // REFACTORED: Use high-level interface to handle all multi-source merge expectations
+        `uvm_info(get_type_name(), $sformatf("Adding multi-source merge expectations for: %s", merge_info.name), UVM_MEDIUM)
+        add_multi_source_merge_expectations(merge_info, source_interrupts);
 
         // Assert all valid source interrupts simultaneously
         `uvm_info(get_type_name(), $sformatf("Asserting %0d source interrupts simultaneously", valid_sources), UVM_MEDIUM)
@@ -397,41 +314,13 @@ class int_lightweight_sequence extends int_base_sequence;
         `uvm_info(get_type_name(), "Waiting for propagation through merge logic", UVM_DEBUG)
         #10ns; // Wait for propagation through merge logic
 
-        // Wait for merge interrupt to be detected
-        `uvm_info(get_type_name(), $sformatf("Waiting for detection of merge interrupt: %s from multiple sources",
-                 merge_info.name), UVM_HIGH)
-        wait_for_interrupt_detection_with_mask(merge_info);
+        // REFACTORED: Use high-level interface to wait for all multi-source merge interrupts
+        `uvm_info(get_type_name(), $sformatf("Waiting for multi-source merge interrupts: %s", merge_info.name), UVM_MEDIUM)
+        wait_for_multi_source_merge_interrupts(merge_info, source_interrupts);
 
-        // CRITICAL FIX: Also wait for source interrupts with direct routing
-        `uvm_info(get_type_name(), "MULTI-SOURCE DUAL DETECTION: Waiting for source interrupts with direct routing", UVM_MEDIUM)
-        foreach (source_interrupts[i]) begin
-            if (source_interrupts[i].rtl_path_src != "") begin
-                bit source_has_direct_routing = (source_interrupts[i].to_ap || source_interrupts[i].to_accel ||
-                                                source_interrupts[i].to_io || source_interrupts[i].to_other_die);
-                if (source_has_direct_routing) begin
-                    `uvm_info(get_type_name(), $sformatf("MULTI-SOURCE DUAL DETECTION: Waiting for direct routing of: %s",
-                             source_interrupts[i].name), UVM_MEDIUM)
-                    wait_for_interrupt_detection_with_mask(source_interrupts[i]);
-                end
-            end
-        end
-
-        // Update status register to reflect merge interrupt occurrence
-        m_routing_model.update_interrupt_status(merge_info.name, 1, m_register_model);
-
-        // CRITICAL FIX: Also update status for source interrupts with direct routing
-        `uvm_info(get_type_name(), "MULTI-SOURCE DUAL STATUS: Updating status for source interrupts with direct routing", UVM_MEDIUM)
-        foreach (source_interrupts[i]) begin
-            if (source_interrupts[i].rtl_path_src != "") begin
-                bit source_has_direct_routing = (source_interrupts[i].to_ap || source_interrupts[i].to_accel ||
-                                                source_interrupts[i].to_io || source_interrupts[i].to_other_die);
-                if (source_has_direct_routing) begin
-                    `uvm_info(get_type_name(), $sformatf("MULTI-SOURCE DUAL STATUS: Updating status for: %s",
-                             source_interrupts[i].name), UVM_HIGH)
-                    m_routing_model.update_interrupt_status(source_interrupts[i].name, 1, m_register_model);
-                end
-            end
-        end
+        // REFACTORED: Use high-level interface to update all multi-source merge status
+        `uvm_info(get_type_name(), $sformatf("Updating multi-source merge status: %s", merge_info.name), UVM_HIGH)
+        update_multi_source_merge_status(merge_info, source_interrupts);
 
         // Clear all source interrupts
         `uvm_info(get_type_name(), "Clearing all source interrupts", UVM_MEDIUM)
