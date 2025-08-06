@@ -268,19 +268,6 @@ class int_routing_model extends uvm_object;
         return 0;
     endfunction
 
-    // Function to get merge interrupt info by name
-    function interrupt_info_s get_merge_interrupt_info(string merge_interrupt_name);
-        interrupt_info_s result;
-        foreach (interrupt_map[i]) begin
-            if (interrupt_map[i].name == merge_interrupt_name) begin
-                return interrupt_map[i];
-            end
-        end
-        // Return empty struct if not found
-        result = '{default:0};
-        return result;
-    endfunction
-
     // Function to predict if an interrupt will be routed considering mask registers
     function bit predict_interrupt_routing_with_mask(string interrupt_name, string destination, int_register_model register_model);
         interrupt_info_s info;
