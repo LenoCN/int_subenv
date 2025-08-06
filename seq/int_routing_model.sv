@@ -125,33 +125,14 @@ class int_routing_model extends uvm_object;
                 end
             end
 
-            // --- New merge interrupts based on CSV comment analysis ---
-
             "iosub_normal_intr": begin
                 // Collect all interrupts that should be merged into iosub_normal_intr
                 foreach (interrupt_map[i]) begin
-                    if (interrupt_map[i].name == "iosub_pmbus0_intr" ||
-                        interrupt_map[i].name == "iosub_pmbus1_intr" ||
-                        interrupt_map[i].name == "iosub_mem_ist_intr" ||
-                        interrupt_map[i].name == "iosub_dma_comreg_intr" ||
-                        // All DMAC channel interrupts (ch0-ch15)
-                        interrupt_map[i].name == "iosub_dma_ch0_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch1_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch2_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch3_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch4_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch5_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch6_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch7_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch8_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch9_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch10_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch11_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch12_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch13_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch14_intr" ||
-                        interrupt_map[i].name == "iosub_dma_ch15_intr") begin
-                        sources.push_back(interrupt_map[i]);
+                    if (interrupt_map[i].group == IOSUB) begin
+                        int idx = interrupt_map[i].index;
+                        if ((idx >= 0 && idx <= 9) || (idx >= 15 && idx <= 50)) begin
+                            sources.push_back(interrupt_map[i]);
+                        end
                     end
                 end
             end
@@ -211,27 +192,6 @@ class int_routing_model extends uvm_object;
                 // No sources to collect for this merge signal
             end
 
-            "merge_external_pll_intr": begin
-                // Collect all external PLL interrupts that should be merged
-                foreach (interrupt_map[i]) begin
-                    if (interrupt_map[i].name == "accel_pll_lock_intr" ||
-                        interrupt_map[i].name == "accel_pll_unlock_intr" ||
-                        interrupt_map[i].name == "psub_pll_lock_intr" ||
-                        interrupt_map[i].name == "psub_pll_unlock_intr" ||
-                        interrupt_map[i].name == "pcie1_pll_lock_intr" ||
-                        interrupt_map[i].name == "pcie1_pll_unlock_intr" ||
-                        interrupt_map[i].name == "d2d_pll_lock_intr" ||
-                        interrupt_map[i].name == "d2d_pll_unlock_intr" ||
-                        interrupt_map[i].name == "ddr0_pll_lock_intr" ||
-                        interrupt_map[i].name == "ddr1_pll_lock_intr" ||
-                        interrupt_map[i].name == "ddr2_pll_lock_intr" ||
-                        // CSUB PLL interrupts (array format)
-                        interrupt_map[i].name.substr(0, 15) == "csub_pll_intr_lock") begin
-                        sources.push_back(interrupt_map[i]);
-                    end
-                end
-            end
-
             default: begin
                 // Not a merge interrupt, return empty array
             end
@@ -247,15 +207,13 @@ class int_routing_model extends uvm_object;
                 interrupt_name == "merge_pll_intr_frechangedone" ||
                 interrupt_name == "merge_pll_intr_frechange_tot_done" ||
                 interrupt_name == "merge_pll_intr_intdocfrac_err" ||
-                // New merge interrupts from CSV analysis
                 interrupt_name == "iosub_normal_intr" ||
                 interrupt_name == "iosub_slv_err_intr" ||
                 interrupt_name == "iosub_ras_cri_intr" ||
                 interrupt_name == "iosub_ras_eri_intr" ||
                 interrupt_name == "iosub_ras_fhi_intr" ||
                 interrupt_name == "iosub_abnormal_0_intr" ||
-                interrupt_name == "iosub_abnormal_1_intr" ||
-                interrupt_name == "merge_external_pll_intr");
+                interrupt_name == "iosub_abnormal_1_intr");
     endfunction
 
     // Helper function to check if an interrupt exists in the interrupt map
@@ -479,13 +437,13 @@ class int_routing_model extends uvm_object;
     // High-level function to check if an interrupt should trigger merge interrupt expectation
     // This encapsulates the logic for different merge interrupt types
     function bit should_trigger_merge_expectation(string interrupt_name, string merge_name, int_register_model register_model);
-        `uvm_info("INT_ROUTING_MODEL", $sformatf("🔍 Checking if interrupt '%s' should trigger merge expectation for '%s'", interrupt_name, merge_name), UVM_HIGH)
-
-        // Check if interrupt is actually a source for this merge
-        interrupt_info_s sources[];
+        interrupt_info_s sources[$];
         int num_sources = get_merge_sources(merge_name, sources);
         bit is_source = 0;
 
+        `uvm_info("INT_ROUTING_MODEL", $sformatf("🔍 Checking if interrupt '%s' should trigger merge expectation for '%s'", interrupt_name, merge_name), UVM_HIGH)
+
+        // Check if interrupt is actually a source for this merge
         foreach (sources[i]) begin
             if (sources[i].name == interrupt_name) begin
                 is_source = 1;
@@ -537,7 +495,7 @@ class int_routing_model extends uvm_object;
         merge_interrupts.delete();
 
         foreach (all_merge_names[i]) begin
-            interrupt_info_s sources[];
+            interrupt_info_s sources[$];
             int num_sources = get_merge_sources(all_merge_names[i], sources);
 
             // Check if source_name is in the sources list
