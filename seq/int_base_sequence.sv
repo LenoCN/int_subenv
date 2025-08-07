@@ -194,82 +194,82 @@ class int_base_sequence extends uvm_sequence;
         `uvm_info(get_type_name(), "=== END SEQUENCE EXPECTED INTERRUPT ===", UVM_MEDIUM)
     endfunction
 
-    // Add expected interrupt with mask consideration
-    function void add_expected_with_mask(interrupt_info_s info);
-        string expected_destinations[$];
-        interrupt_info_s masked_info;
+// 修改 add_expected_with_mask 函数（添加 source_name 参数，并处理 iosub_normal_intr）
+function void add_expected_with_mask(interrupt_info_s info, string source_name = "");
+    string expected_destinations[$];
+    interrupt_info_s masked_info;
 
-        `uvm_info(get_type_name(), "=== SEQUENCE ADDING EXPECTED INTERRUPT WITH MASK ===", UVM_MEDIUM)
-        `uvm_info(get_type_name(), $sformatf("Sequence '%s' adding expected interrupt with mask: %s", get_sequence_path(), info.name), UVM_MEDIUM)
-        `uvm_info(get_type_name(), $sformatf("📊 Original interrupt routing: AP=%b, SCP=%b, MCP=%b, ACCEL=%b, IO=%b, OTHER_DIE=%b",
-                  info.to_ap, info.to_scp, info.to_mcp, info.to_accel, info.to_io, info.to_other_die), UVM_MEDIUM)
+    `uvm_info(get_type_name(), "=== SEQUENCE ADDING EXPECTED INTERRUPT WITH MASK ===", UVM_MEDIUM)
+    `uvm_info(get_type_name(), $sformatf("Sequence '%s' adding expected interrupt with mask: %s (source: %s)", get_sequence_path(), info.name, source_name), UVM_MEDIUM)
+    `uvm_info(get_type_name(), $sformatf("📊 Original interrupt routing: AP=%b, SCP=%b, MCP=%b, ACCEL=%b, IO=%b, OTHER_DIE=%b",
+              info.to_ap, info.to_scp, info.to_mcp, info.to_accel, info.to_io, info.to_other_die), UVM_MEDIUM)
 
-        // Get expected destinations considering masks
-        `uvm_info(get_type_name(), $sformatf("🔍 Calling routing model to get expected destinations with mask for: %s", info.name), UVM_HIGH)
-        m_routing_model.get_expected_destinations_with_mask(info.name, expected_destinations, m_register_model);
+    // Get expected destinations considering masks (原有代码)
+    `uvm_info(get_type_name(), $sformatf("🔍 Calling routing model to get expected destinations with mask for: %s", info.name), UVM_HIGH)
+    m_routing_model.get_expected_destinations_with_mask(info.name, expected_destinations, m_register_model);
 
-        if (expected_destinations.size() == 0) begin
-            `uvm_info(get_type_name(), $sformatf("⚠️  Interrupt '%s' is completely masked - no expectations will be registered", info.name), UVM_MEDIUM)
-            `uvm_info(get_type_name(), $sformatf("📋 This means all destinations are either not routed or masked by registers"), UVM_MEDIUM)
-            `uvm_info(get_type_name(), "=== END SEQUENCE EXPECTED INTERRUPT WITH MASK ===", UVM_MEDIUM)
-            return;
+    if (expected_destinations.size() == 0) begin
+        `uvm_info(get_type_name(), $sformatf("⚠️  Interrupt '%s' is completely masked - no expectations will be registered", info.name), UVM_MEDIUM)
+        return;
+    end
+
+    // Create modified info with only unmasked destinations (原有代码)
+    masked_info = info;
+    masked_info.to_ap = 0;
+    masked_info.to_scp = 0;
+    masked_info.to_mcp = 0;
+    masked_info.to_accel = 0;
+    masked_info.to_io = 0;
+    masked_info.to_other_die = 0;
+
+    // 最简洁修改：对于 iosub_normal_intr，独立检查并设置 to_scp 和 to_mcp（基于源）
+    if (info.name == "iosub_normal_intr" && source_name != "") begin
+        // 独立检查 SCP 路径：源是否通过 SCP 的 Layer1 + Layer2
+        if (info.to_scp && !m_register_model.check_iosub_normal_mask_layer(source_name, "SCP", m_routing_model) &&
+            !m_register_model.check_general_mask_layer(info.name, "SCP", m_routing_model)) begin
+            masked_info.to_scp = 1;
+            `uvm_info(get_type_name(), $sformatf("✅ Enabled SCP for iosub_normal_intr (source %s passes masks)", source_name), UVM_HIGH)
         end
 
-        `uvm_info(get_type_name(), $sformatf("✅ Found %0d expected destinations after mask filtering:", expected_destinations.size()), UVM_MEDIUM)
-        foreach (expected_destinations[i]) begin
-            `uvm_info(get_type_name(), $sformatf("  ✅ %s", expected_destinations[i]), UVM_MEDIUM)
+        // 独立检查 MCP 路径：源是否通过 MCP 的 Layer1 + Layer2
+        if (info.to_mcp && !m_register_model.check_iosub_normal_mask_layer(source_name, "MCP", m_routing_model) &&
+            !m_register_model.check_general_mask_layer(info.name, "MCP", m_routing_model)) begin
+            masked_info.to_mcp = 1;
+            `uvm_info(get_type_name(), $sformatf("✅ Enabled MCP for iosub_normal_intr (source %s passes masks)", source_name), UVM_HIGH)
         end
 
-        // Create modified info with only unmasked destinations
-        `uvm_info(get_type_name(), $sformatf("🔧 Creating masked interrupt info for: %s", info.name), UVM_HIGH)
-        masked_info = info;
-        masked_info.to_ap = 0;
-        masked_info.to_scp = 0;
-        masked_info.to_mcp = 0;
-        masked_info.to_accel = 0;
-        masked_info.to_io = 0;
-        masked_info.to_other_die = 0;
-
-        // Set only the unmasked destinations
-        `uvm_info(get_type_name(), $sformatf("🎯 Setting unmasked destinations for interrupt: %s", info.name), UVM_HIGH)
+        // 其他目的地保持原有（如果有）
         foreach (expected_destinations[i]) begin
             case (expected_destinations[i])
-                "AP": begin
-                    masked_info.to_ap = 1;
-                    `uvm_info(get_type_name(), $sformatf("✅ Enabled AP destination for %s", info.name), UVM_HIGH)
-                end
-                "SCP": begin
-                    masked_info.to_scp = 1;
-                    `uvm_info(get_type_name(), $sformatf("✅ Enabled SCP destination for %s", info.name), UVM_HIGH)
-                end
-                "MCP": begin
-                    masked_info.to_mcp = 1;
-                    `uvm_info(get_type_name(), $sformatf("✅ Enabled MCP destination for %s", info.name), UVM_HIGH)
-                end
-                "ACCEL": begin
-                    masked_info.to_accel = 1;
-                    `uvm_info(get_type_name(), $sformatf("✅ Enabled ACCEL destination for %s", info.name), UVM_HIGH)
-                end
-                "IO": begin
-                    masked_info.to_io = 1;
-                    `uvm_info(get_type_name(), $sformatf("✅ Enabled IO destination for %s", info.name), UVM_HIGH)
-                end
-                "OTHER_DIE": begin
-                    masked_info.to_other_die = 1;
-                    `uvm_info(get_type_name(), $sformatf("✅ Enabled OTHER_DIE destination for %s", info.name), UVM_HIGH)
-                end
+                "AP": masked_info.to_ap = 1;
+                "ACCEL": masked_info.to_accel = 1;
+                "IO": masked_info.to_io = 1;
+                "OTHER_DIE": masked_info.to_other_die = 1;
             endcase
         end
+    end else begin
+        // 非 iosub_normal_intr 或无源：使用原有逻辑
+        foreach (expected_destinations[i]) begin
+            case (expected_destinations[i])
+                "AP": masked_info.to_ap = 1;
+                "SCP": masked_info.to_scp = 1;
+                "MCP": masked_info.to_mcp = 1;
+                "ACCEL": masked_info.to_accel = 1;
+                "IO": masked_info.to_io = 1;
+                "OTHER_DIE": masked_info.to_other_die = 1;
+            endcase
+        end
+    end
 
-        `uvm_info(get_type_name(), $sformatf("📊 Final masked interrupt routing: AP=%b, SCP=%b, MCP=%b, ACCEL=%b, IO=%b, OTHER_DIE=%b",
-                  masked_info.to_ap, masked_info.to_scp, masked_info.to_mcp, masked_info.to_accel, masked_info.to_io, masked_info.to_other_die), UVM_MEDIUM)
+    `uvm_info(get_type_name(), $sformatf("📊 Final masked interrupt routing: AP=%b, SCP=%b, MCP=%b, ACCEL=%b, IO=%b, OTHER_DIE=%b",
+              masked_info.to_ap, masked_info.to_scp, masked_info.to_mcp, masked_info.to_accel, masked_info.to_io, masked_info.to_other_die), UVM_MEDIUM)
 
-        // Register the masked expectation
-        `uvm_info(get_type_name(), $sformatf("📝 Registering masked expectation for interrupt: %s", info.name), UVM_HIGH)
-        add_expected(masked_info);
+    // Register the masked expectation
+    `uvm_info(get_type_name(), $sformatf("📝 Registering masked expectation for interrupt: %s", info.name), UVM_HIGH)
+    add_expected(masked_info);
 
-        `uvm_info(get_type_name(), "=== END SEQUENCE EXPECTED INTERRUPT WITH MASK ===", UVM_MEDIUM)
-    endfunction
+    `uvm_info(get_type_name(), "=== END SEQUENCE EXPECTED INTERRUPT WITH MASK ===", UVM_MEDIUM)
+endfunction
 
     // High-level function to add all expected interrupts for a given source interrupt
     // This automatically handles both direct routing and merge routing expectations
@@ -298,7 +298,7 @@ class int_base_sequence extends uvm_sequence;
                     // Check if this source should trigger the merge interrupt expectation
                     if (m_register_model.should_expect_merge_interrupt(merge_interrupts[i], source_info.name, m_routing_model)) begin
                         `uvm_info(get_type_name(), $sformatf("Adding merge routing expectation: %s (from source: %s)", merge_interrupts[i], source_info.name), UVM_MEDIUM)
-                        add_expected_with_mask(merge_info);
+                        add_expected_with_mask(merge_info, source_info.name);
                     end else begin
                         `uvm_info(get_type_name(), $sformatf("🚫 Skipping merge expectation: %s (source %s blocked by mask)", merge_interrupts[i], source_info.name), UVM_MEDIUM)
                     end
@@ -383,7 +383,7 @@ class int_base_sequence extends uvm_sequence;
         // 1. Add expectation for the merge interrupt if source should trigger it
         if (m_routing_model.should_trigger_merge_expectation(source_info.name, merge_info.name, m_register_model)) begin
             `uvm_info(get_type_name(), $sformatf("Adding merge expectation: %s (from source: %s)", merge_info.name, source_info.name), UVM_HIGH)
-            add_expected_with_mask(merge_info);
+            add_expected_with_mask(merge_info, source_info.name);
         end else begin
             `uvm_info(get_type_name(), $sformatf("🚫 Skipping merge expectation: %s (source %s blocked by mask)", merge_info.name, source_info.name), UVM_MEDIUM)
         end
