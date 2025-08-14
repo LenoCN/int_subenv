@@ -17,7 +17,7 @@ class timing_config extends uvm_object;
 
     // Pulse interrupt timing parameters
     int pulse_width_ns = 1;                // Width of pulse
-    int pulse_setup_time_ns = 1;           // Setup time before pulse
+    int pulse_setup_time_ns = 2;           // Setup time before pulse
     int pulse_hold_time_ns = 1;            // Hold time after pulse
 
     // Detection timing parameters

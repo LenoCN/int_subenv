@@ -42,7 +42,7 @@ class int_lightweight_sequence extends int_base_sequence;
                      info.name, info.to_other_die, info.to_io), UVM_MEDIUM)
             return 1;
         end
-
+        
         // Skip interrupts from SCP that only route to SCP
         if (info.group == SCP && info.to_scp == 1 &&
             info.to_ap == 0 && info.to_mcp == 0 && info.to_accel == 0 &&
@@ -75,7 +75,7 @@ class int_lightweight_sequence extends int_base_sequence;
             `uvm_warning(get_type_name(), "Interrupt map is empty. No checks will be performed.")
             return;
         end
-
+        #10us;
         `uvm_info(get_type_name(), $sformatf("Starting lightweight interrupt routing check for %0d interrupts",
                   m_routing_model.interrupt_map.size()), UVM_LOW)
 
@@ -113,7 +113,7 @@ class int_lightweight_sequence extends int_base_sequence;
     virtual task test_single_interrupt(interrupt_info_s info);
         int_stimulus_item stim_item;
 
-        `uvm_info(get_type_name(), $sformatf("Testing single interrupt: %s", info.name), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf(" SINGLE INTERRUPT TEST START: %s", info.name), UVM_MEDIUM)
 
         if (info.rtl_path_src == "") begin
             `uvm_warning(get_type_name(), $sformatf("Source path for interrupt '%s' is empty. Skipping.", info.name));
@@ -127,7 +127,7 @@ class int_lightweight_sequence extends int_base_sequence;
 
         `uvm_info(get_type_name(), $sformatf("RTL source path for interrupt %s: %s",
                  info.name, info.rtl_path_src), UVM_HIGH)
-
+        
         // REFACTORED: Use high-level interface to handle all routing paths automatically
         `uvm_info(get_type_name(), $sformatf("Adding all expected interrupts for: %s", info.name), UVM_MEDIUM)
         add_all_expected_interrupts(info);
@@ -135,7 +135,7 @@ class int_lightweight_sequence extends int_base_sequence;
         // Create and send stimulus item to driver
         `uvm_info(get_type_name(), $sformatf("Creating ASSERT stimulus for interrupt: %s", info.name), UVM_HIGH)
         stim_item = int_stimulus_item::create_stimulus(info, STIMULUS_ASSERT);
-
+        
         `uvm_info(get_type_name(), $sformatf("Sending ASSERT stimulus for interrupt: %s", info.name), UVM_DEBUG)
         start_item(stim_item);
         finish_item(stim_item);
@@ -167,7 +167,7 @@ class int_lightweight_sequence extends int_base_sequence;
 
     // Simplified merge interrupt handling
     virtual task check_merge_interrupt_routing(interrupt_info_s merge_info);
-        interrupt_info_s source_interrupts[];
+        interrupt_info_s source_interrupts[$];
         int num_sources;
 
         `uvm_info(get_type_name(), $sformatf("Checking merge interrupt: %s", merge_info.name), UVM_LOW)
@@ -178,7 +178,7 @@ class int_lightweight_sequence extends int_base_sequence;
         num_sources = m_routing_model.get_merge_sources(merge_info.name, source_interrupts);
 
         if (num_sources == 0) begin
-            `uvm_warning(get_type_name(), $sformatf("No source interrupts found for merge interrupt '%s'", merge_info.name));
+            `uvm_error(get_type_name(), $sformatf("No source interrupts found for merge interrupt '%s'", merge_info.name));
             return;
         end
 
@@ -200,8 +200,95 @@ class int_lightweight_sequence extends int_base_sequence;
                      merge_info.name), UVM_MEDIUM)
             test_multiple_merge_sources(merge_info, source_interrupts);
         end
-        
+
         `uvm_info(get_type_name(), $sformatf("Completed merge interrupt routing check for: %s",
+                 merge_info.name), UVM_LOW)
+    endtask
+
+    // Test multiple merge sources simultaneously - REFACTORED
+    virtual task test_multiple_merge_sources(interrupt_info_s merge_info, interrupt_info_s source_interrupts[]);
+        int_stimulus_item stim_item;
+        interrupt_info_s valid_sources[$]; // Queue to store only valid, stimulatable sources
+
+        `uvm_info(get_type_name(), $sformatf("MULTI-SOURCE MERGE TEST: Testing %0d sources for merge interrupt '%s'",
+                 source_interrupts.size(), merge_info.name), UVM_LOW)
+
+        // 1. Filter out invalid or non-stimulatable sources
+        `uvm_info(get_type_name(), "Filtering for valid source interrupts with RTL paths", UVM_DEBUG)
+        foreach (source_interrupts[i]) begin
+            if (source_interrupts[i].rtl_path_src != "" && !m_routing_model.is_merge_interrupt(source_interrupts[i].name)) begin
+                valid_sources.push_back(source_interrupts[i]);
+            end else begin
+                `uvm_info(get_type_name(), $sformatf("Skipping source '%s' (empty path or is a merge interrupt itself)", source_interrupts[i].name), UVM_HIGH);
+            end
+        end
+
+        if (valid_sources.size() < 2) begin
+            `uvm_warning(get_type_name(), $sformatf("Not enough valid sources (%0d) for multi-source test of merge interrupt '%s'. Test skipped.",
+                      valid_sources.size(), merge_info.name));
+            return;
+        end
+
+        `uvm_info(get_type_name(), $sformatf("Found %0d valid sources for multi-source test of merge interrupt '%s'",
+                 valid_sources.size(), merge_info.name), UVM_MEDIUM)
+
+        // Skip merge interrupts that only route to other_die or io destinations
+        if (should_skip_interrupt_check(merge_info)) begin
+             `uvm_info(get_type_name(), $sformatf("Skipping multi-source test for '%s' due to destination filter.", merge_info.name), UVM_MEDIUM);
+            return;
+        end
+
+        // 2. Set expectations and assert all valid source interrupts simultaneously
+        `uvm_info(get_type_name(), $sformatf("Asserting %0d source interrupts simultaneously", valid_sources.size()), UVM_MEDIUM)
+        
+        // --- Set expectations first ---
+        foreach (valid_sources[i]) begin
+             add_all_expected_interrupts(valid_sources[i]);
+        end
+
+        // --- Then, assert them all ---
+        foreach (valid_sources[i]) begin
+            `uvm_info(get_type_name(), $sformatf("Sending ASSERT stimulus for source: %s", valid_sources[i].name), UVM_DEBUG)
+            stim_item = int_stimulus_item::create_stimulus(valid_sources[i], STIMULUS_ASSERT);
+            start_item(stim_item);
+            finish_item(stim_item);
+        end
+
+        `uvm_info(get_type_name(), "Waiting for propagation through merge logic...", UVM_DEBUG)
+        #10ns;
+
+        // 3. Wait for all expected interrupts from all sources
+        `uvm_info(get_type_name(), $sformatf("Waiting for all interrupts resulting from %0d sources", valid_sources.size()), UVM_MEDIUM)
+        begin
+            fork
+                foreach (valid_sources[i]) begin
+                    automatic int j = i;
+                    fork
+                       wait_for_all_expected_interrupts(valid_sources[j]);
+                    join_none
+                end
+            join
+        end
+
+        // 4. Update status for all affected interrupts
+        `uvm_info(get_type_name(), "Updating status for all affected interrupts...", UVM_HIGH)
+        foreach (valid_sources[i]) begin
+            update_all_interrupt_status(valid_sources[i]);
+        end
+
+        // 5. Clear all source interrupts
+        `uvm_info(get_type_name(), "Clearing all source interrupts...", UVM_MEDIUM)
+        foreach (valid_sources[i]) begin
+            `uvm_info(get_type_name(), $sformatf("Sending CLEAR stimulus for source: %s", valid_sources[i].name), UVM_DEBUG)
+            stim_item = int_stimulus_item::create_stimulus(valid_sources[i], STIMULUS_CLEAR);
+            start_item(stim_item);
+            finish_item(stim_item);
+        end
+
+        `uvm_info(get_type_name(), "Waiting for clear to propagate...", UVM_DEBUG)
+        #10ns;
+        
+        `uvm_info(get_type_name(), $sformatf("Completed multi-source test for merge interrupt: %s",
                  merge_info.name), UVM_LOW)
     endtask
 
@@ -209,7 +296,7 @@ class int_lightweight_sequence extends int_base_sequence;
     virtual task test_merge_source(interrupt_info_s merge_info, interrupt_info_s source_info);
         int_stimulus_item stim_item;
 
-        `uvm_info(get_type_name(), $sformatf("Testing merge source: %s -> %s", source_info.name, merge_info.name), UVM_MEDIUM)
+        `uvm_info(get_type_name(), $sformatf("MERGE SOURCE TEST: %s -> %s", source_info.name, merge_info.name), UVM_MEDIUM)
 
         if (source_info.rtl_path_src == "") begin
             `uvm_warning(get_type_name(), $sformatf("Source path for merge source '%s' is empty. Skipping.", source_info.name));
@@ -218,130 +305,49 @@ class int_lightweight_sequence extends int_base_sequence;
 
         // Skip merge interrupts that only route to other_die or io destinations
         if (should_skip_interrupt_check(merge_info)) begin
+            `uvm_info(get_type_name(), $sformatf("Skipping merge test for '%s' due to destination filter.", merge_info.name), UVM_MEDIUM);
             return;
         end
 
-        `uvm_info(get_type_name(), $sformatf("RTL source path for merge source %s: %s",
-                 source_info.name, source_info.rtl_path_src), UVM_HIGH)
+         if (m_routing_model.is_merge_interrupt(source_info.name)) begin
+            `uvm_info(get_type_name(), $sformatf("⚠️  Skipping direct stimulus for merge source '%s' as it is itself a merge interrupt. It will be tested via its own sources.", source_info.name), UVM_MEDIUM)
+            return;
+        end
 
-        // REFACTORED: Use high-level interface to handle all merge test expectations
-        `uvm_info(get_type_name(), $sformatf("Adding merge test expectations for: %s -> %s", source_info.name, merge_info.name), UVM_MEDIUM)
-        add_merge_test_expectations(merge_info, source_info);
+        // 1. (ROBUST) Add all expectations for the entire merge chain starting from the source
+        `uvm_info(get_type_name(), $sformatf("Adding all hierarchical expectations for source: %s", source_info.name), UVM_MEDIUM)
+        add_all_expected_interrupts(source_info);
 
-        // Send stimulus for source interrupt
-        `uvm_info(get_type_name(), $sformatf("Creating ASSERT stimulus for source interrupt: %s", source_info.name), UVM_HIGH)
+        // 2. (ROBUST) Send stimulus for the source interrupt
+        `uvm_info(get_type_name(), $sformatf("Creating ASSERT stimulus for source: %s", source_info.name), UVM_HIGH)
         stim_item = int_stimulus_item::create_stimulus(source_info, STIMULUS_ASSERT);
-
-        `uvm_info(get_type_name(), $sformatf("Sending ASSERT stimulus for source interrupt: %s", source_info.name), UVM_DEBUG)
+        
         start_item(stim_item);
         finish_item(stim_item);
 
-        `uvm_info(get_type_name(), "Waiting for propagation through merge logic", UVM_DEBUG)
-        #10ns; // Wait for propagation through merge logic
+        `uvm_info(get_type_name(), "Waiting a bit for propagation through merge logic...", UVM_DEBUG)
+        #10ns;
 
-        // REFACTORED: Use high-level interface to wait for all merge test interrupts
-        `uvm_info(get_type_name(), $sformatf("Waiting for merge test interrupts: %s -> %s", source_info.name, merge_info.name), UVM_MEDIUM)
-        wait_for_merge_test_interrupts(merge_info, source_info);
+        // 3. (ROBUST) Wait for all interrupts in the merge chain to be detected
+        `uvm_info(get_type_name(), $sformatf("Waiting for all hierarchical interrupts from source: %s", source_info.name), UVM_MEDIUM)
+        wait_for_all_expected_interrupts(source_info);
 
-        // REFACTORED: Use high-level interface to update all merge test status
-        `uvm_info(get_type_name(), $sformatf("Updating merge test status: %s -> %s", source_info.name, merge_info.name), UVM_HIGH)
-        update_merge_test_status(merge_info, source_info);
+        // 4. (ROBUST) Update status for all affected interrupts in the model
+        `uvm_info(get_type_name(), $sformatf("Updating all hierarchical statuses for source: %s", source_info.name), UVM_HIGH)
+        update_all_interrupt_status(source_info);
 
-        // Clear the source interrupt
-        `uvm_info(get_type_name(), $sformatf("Creating CLEAR stimulus for source interrupt: %s", source_info.name), UVM_HIGH)
+        // 5. (ROBUST) Clear the source interrupt stimulus
+        `uvm_info(get_type_name(), $sformatf("Creating CLEAR stimulus for source: %s", source_info.name), UVM_HIGH)
         stim_item = int_stimulus_item::create_stimulus(source_info, STIMULUS_CLEAR);
-
-        `uvm_info(get_type_name(), $sformatf("Sending CLEAR stimulus for source interrupt: %s", source_info.name), UVM_DEBUG)
+        
         start_item(stim_item);
         finish_item(stim_item);
 
-        `uvm_info(get_type_name(), "Waiting for clear to propagate", UVM_DEBUG)
-        #10ns; // Wait for clear to propagate
+        `uvm_info(get_type_name(), "Waiting for clear to propagate...", UVM_DEBUG)
+        #10ns;
         
         `uvm_info(get_type_name(), $sformatf("Completed testing of merge source: %s -> %s",
                  source_info.name, merge_info.name), UVM_MEDIUM)
-    endtask
-
-    // Test multiple merge sources simultaneously
-    virtual task test_multiple_merge_sources(interrupt_info_s merge_info, interrupt_info_s source_interrupts[]);
-        int_stimulus_item stim_item;
-        int valid_sources = 0;
-
-        `uvm_info(get_type_name(), $sformatf("Testing multiple sources simultaneously for merge interrupt: %s",
-                 merge_info.name), UVM_LOW)
-
-        // Count valid sources
-        `uvm_info(get_type_name(), "Counting valid source interrupts with RTL paths", UVM_DEBUG)
-        foreach (source_interrupts[i]) begin
-            if (source_interrupts[i].rtl_path_src != "") begin
-                valid_sources++;
-            end
-        end
-
-        if (valid_sources < 2) begin
-            `uvm_warning(get_type_name(), $sformatf("Not enough valid sources (%0d) for multi-source test of merge interrupt '%s'",
-                      valid_sources, merge_info.name));
-            return;
-        end
-
-        `uvm_info(get_type_name(), $sformatf("Found %0d valid sources for multi-source test of merge interrupt: %s",
-                 valid_sources, merge_info.name), UVM_MEDIUM)
-
-        // Skip merge interrupts that only route to other_die or io destinations
-        if (should_skip_interrupt_check(merge_info)) begin
-            return;
-        end
-
-        // REFACTORED: Use high-level interface to handle all multi-source merge expectations
-        `uvm_info(get_type_name(), $sformatf("Adding multi-source merge expectations for: %s", merge_info.name), UVM_MEDIUM)
-        add_multi_source_merge_expectations(merge_info, source_interrupts);
-
-        // Assert all valid source interrupts simultaneously
-        `uvm_info(get_type_name(), $sformatf("Asserting %0d source interrupts simultaneously", valid_sources), UVM_MEDIUM)
-        foreach (source_interrupts[i]) begin
-            if (source_interrupts[i].rtl_path_src != "") begin
-                `uvm_info(get_type_name(), $sformatf("Creating ASSERT stimulus for source interrupt: %s",
-                         source_interrupts[i].name), UVM_HIGH)
-                stim_item = int_stimulus_item::create_stimulus(source_interrupts[i], STIMULUS_ASSERT);
-
-                `uvm_info(get_type_name(), $sformatf("Sending ASSERT stimulus for source interrupt: %s",
-                         source_interrupts[i].name), UVM_DEBUG)
-                start_item(stim_item);
-                finish_item(stim_item);
-            end
-        end
-
-        `uvm_info(get_type_name(), "Waiting for propagation through merge logic", UVM_DEBUG)
-        #10ns; // Wait for propagation through merge logic
-
-        // REFACTORED: Use high-level interface to wait for all multi-source merge interrupts
-        `uvm_info(get_type_name(), $sformatf("Waiting for multi-source merge interrupts: %s", merge_info.name), UVM_MEDIUM)
-        wait_for_multi_source_merge_interrupts(merge_info, source_interrupts);
-
-        // REFACTORED: Use high-level interface to update all multi-source merge status
-        `uvm_info(get_type_name(), $sformatf("Updating multi-source merge status: %s", merge_info.name), UVM_HIGH)
-        update_multi_source_merge_status(merge_info, source_interrupts);
-
-        // Clear all source interrupts
-        `uvm_info(get_type_name(), "Clearing all source interrupts", UVM_MEDIUM)
-        foreach (source_interrupts[i]) begin
-            if (source_interrupts[i].rtl_path_src != "") begin
-                `uvm_info(get_type_name(), $sformatf("Creating CLEAR stimulus for source interrupt: %s",
-                         source_interrupts[i].name), UVM_HIGH)
-                stim_item = int_stimulus_item::create_stimulus(source_interrupts[i], STIMULUS_CLEAR);
-                
-                `uvm_info(get_type_name(), $sformatf("Sending CLEAR stimulus for source interrupt: %s",
-                         source_interrupts[i].name), UVM_DEBUG)
-                start_item(stim_item);
-                finish_item(stim_item);
-            end
-        end
-
-        `uvm_info(get_type_name(), "Waiting for clear to propagate", UVM_DEBUG)
-        #10ns; // Wait for clear to propagate
-        
-        `uvm_info(get_type_name(), $sformatf("Completed multi-source test for merge interrupt: %s",
-                 merge_info.name), UVM_LOW)
     endtask
 
 endclass

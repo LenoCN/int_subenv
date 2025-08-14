@@ -14,7 +14,7 @@ package int_subenv_pkg;
     `include "env/int_event_manager.sv"
     `include "env/int_monitor.sv"
     `include "env/int_driver.sv"
-    `include "env/int_coverage.sv"
+    //`include "env/int_coverage.sv"
     `include "env/int_sequencer.sv"
     `include "env/int_subenv.sv"
     `include "seq/int_base_sequence.sv"

@@ -5,7 +5,7 @@
 // for sequences to wait for interrupt detection events
 class int_event_manager extends uvm_object;
     `uvm_object_utils(int_event_manager)
-
+    
     // Event pool for interrupt detection handshake
     uvm_event_pool interrupt_event_pool;
 
@@ -59,7 +59,12 @@ class int_event_manager extends uvm_object;
 
         // Wait for all expected events to be triggered with timeout
         // Use wait_ptrigger() to avoid race conditions - it can detect events triggered before or after the wait
+        // Fixed race condition: check if event was already triggered before waiting        
         foreach (int_events[i]) begin
+            if (int_events[i].is_on()) begin
+                `uvm_info("INT_EVENT_MANAGER", $sformatf("Handshake: Event already triggered (past detection) for %s", event_keys[i]), UVM_HIGH)
+                continue; 
+            end
             fork
                 begin
                     int_events[i].wait_ptrigger();
@@ -83,10 +88,7 @@ class int_event_manager extends uvm_object;
                       info.name), UVM_MEDIUM)
         end
     endtask
-
-    // Note: mark_event_triggered() and is_event_triggered() methods removed
-    // as they are no longer needed with wait_ptrigger() approach
-
+    
     // Get the event pool
     function uvm_event_pool get_event_pool();
         return interrupt_event_pool;

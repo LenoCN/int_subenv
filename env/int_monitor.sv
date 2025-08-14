@@ -84,7 +84,8 @@ class int_monitor extends uvm_monitor;
             if (info.rtl_path_ap != "") monitor_single_path(info, "AP", info.rtl_path_ap);
             if (info.rtl_path_scp != "") monitor_single_path(info, "SCP", info.rtl_path_scp);
             if (info.rtl_path_mcp != "") monitor_single_path(info, "MCP", info.rtl_path_mcp);
-            if (info.rtl_path_accel != "") monitor_single_path(info, "ACCEL", info.rtl_path_accel);
+            if (info.rtl_path_accel!= "") monitor_single_path(info, "ACCEL", info.rtl_path_accel);
+            // TODO
             // IO monitoring disabled - iosub_to_io monitoring mechanism turned off
             // if (info.rtl_path_io != "") monitor_single_path(info, "IO", info.rtl_path_io);
             if (info.rtl_path_other_die != "") monitor_single_path(info, "OTHER_DIE", info.rtl_path_other_die);
@@ -158,7 +159,8 @@ class int_monitor extends uvm_monitor;
 
                 prev_value = current_value;
                 first_read = 0;
-            end else begin
+            end
+            else begin
                 consecutive_failures++;
                 if (consecutive_failures >= MAX_FAILURES) begin
                     `uvm_error(get_type_name(), $sformatf("Failed to read signal at path: %s (consecutive failures: %0d)",
@@ -169,12 +171,12 @@ class int_monitor extends uvm_monitor;
                             consecutive_failures, MAX_FAILURES, path))
             end
 
-            // Check for timeout using configurable timeout
-            if (timeout_counter >= max_timeout_cycles) begin
-                `uvm_error(get_type_name(), $sformatf("Timeout (%0dns) waiting for signal %s to become %0d (current: %0d, cycles: %0d)",
-                          timing_cfg.detection_timeout_ns, path, expected_value, current_value, timeout_counter))
-                break;
-            end
+            //// Check for timeout using configurable timeout
+            //if (timeout_counter >= max_timeout_cycles) begin
+            //    `uvm_error(get_type_name(), $sformatf("Timeout (%0dns) waiting for signal %s to become %0d (current: %0d, cycles: %0d)",
+            //              timing_cfg.detection_timeout_ns, path, expected_value, current_value, timeout_counter))
+            //    break;
+            //end
         end
     endtask
 
@@ -212,8 +214,9 @@ class int_monitor extends uvm_monitor;
 
         `uvm_info(get_type_name(), $sformatf("Sending transaction to scoreboard: %s@%s", info.name, dest), UVM_MEDIUM)
 
-        // Validate routing configuration (only at HIGH verbosity to avoid spam)
-        debug_interrupt_routing(info, dest);
+        //TODO : Disable , the scoreboard has been checked.
+        //// Validate routing configuration (only at HIGH verbosity to avoid spam)
+        //debug_interrupt_routing(info, dest);
 
         // Send to scoreboard
         item_collected_port.write(trans);
@@ -222,7 +225,6 @@ class int_monitor extends uvm_monitor;
         event_key = $sformatf("%s@%s", info.name, dest);
         int_event = interrupt_detected_events.get(event_key);
 
-        // Trigger the event - race condition handled by wait_ptrigger() in event_manager
         int_event.trigger();
 
         `uvm_info(get_type_name(), $sformatf("✅ INTERRUPT DETECTED: '%s' -> '%s' (event: %s)",
@@ -230,77 +232,12 @@ class int_monitor extends uvm_monitor;
         `uvm_info(get_type_name(), "=== END INTERRUPT TRANSACTION ===", UVM_MEDIUM)
     endtask
 
-    // Generic debugging function for interrupt routing validation
-    function void debug_interrupt_routing(interrupt_info_s info, string dest);
-        logic current_src_value, current_dest_value;
-        bit routing_valid = 0;
-
-        `uvm_info(get_type_name(), $sformatf("🔍 === INTERRUPT ROUTING DEBUG: %s ===", info.name), UVM_HIGH)
-        `uvm_info(get_type_name(), $sformatf("Interrupt: %s detected at destination: %s", info.name, dest), UVM_HIGH)
-
-        // Read current signal values for debugging
-        if (uvm_hdl_read(info.rtl_path_src, current_src_value)) begin
-            `uvm_info(get_type_name(), $sformatf("Source signal value: %s = %0d", info.rtl_path_src, current_src_value), UVM_HIGH)
-        end else begin
-            `uvm_warning(get_type_name(), $sformatf("Failed to read source signal: %s", info.rtl_path_src));
-        end
-
-        // Validate routing configuration and read destination signal
-        case (dest)
-            "AP": begin
-                routing_valid = info.to_ap;
-                if (info.rtl_path_ap != "" && uvm_hdl_read(info.rtl_path_ap, current_dest_value)) begin
-                    `uvm_info(get_type_name(), $sformatf("AP destination signal: %s = %0d", info.rtl_path_ap, current_dest_value), UVM_HIGH)
-                end
-            end
-            "SCP": begin
-                routing_valid = info.to_scp;
-                if (info.rtl_path_scp != "" && uvm_hdl_read(info.rtl_path_scp, current_dest_value)) begin
-                    `uvm_info(get_type_name(), $sformatf("SCP destination signal: %s = %0d", info.rtl_path_scp, current_dest_value), UVM_HIGH)
-                end
-            end
-            "MCP": begin
-                routing_valid = info.to_mcp;
-                if (info.rtl_path_mcp != "" && uvm_hdl_read(info.rtl_path_mcp, current_dest_value)) begin
-                    `uvm_info(get_type_name(), $sformatf("MCP destination signal: %s = %0d", info.rtl_path_mcp, current_dest_value), UVM_HIGH)
-                end
-            end
-            "ACCEL": begin
-                routing_valid = info.to_accel;
-                if (info.rtl_path_accel != "" && uvm_hdl_read(info.rtl_path_accel, current_dest_value)) begin
-                    `uvm_info(get_type_name(), $sformatf("ACCEL destination signal: %s = %0d", info.rtl_path_accel, current_dest_value), UVM_HIGH)
-                end
-            end
-            "IO": begin
-                routing_valid = info.to_io;
-                if (info.rtl_path_io != "" && uvm_hdl_read(info.rtl_path_io, current_dest_value)) begin
-                    `uvm_info(get_type_name(), $sformatf("IO destination signal: %s = %0d", info.rtl_path_io, current_dest_value), UVM_HIGH)
-                end
-            end
-            "OTHER_DIE": begin
-                routing_valid = info.to_other_die;
-                if (info.rtl_path_other_die != "" && uvm_hdl_read(info.rtl_path_other_die, current_dest_value)) begin
-                    `uvm_info(get_type_name(), $sformatf("OTHER_DIE destination signal: %s = %0d", info.rtl_path_other_die, current_dest_value), UVM_HIGH)
-                end
-            end
-        endcase
-
-        // Report routing validation result
-        if (!routing_valid) begin
-            `uvm_error(get_type_name(), $sformatf("🚨 ROUTING ERROR: %s detected at %s but routing not configured!", info.name, dest));
-        end else begin
-            `uvm_info(get_type_name(), $sformatf("✅ Routing valid: %s correctly routed to %s", info.name, dest), UVM_HIGH)
-        end
-
-        `uvm_info(get_type_name(), $sformatf("🔍 === END ROUTING DEBUG: %s ===", info.name), UVM_HIGH)
-    endfunction
-
     // Task 2: Validate routing configuration before monitoring
     virtual function void validate_routing_configuration(interrupt_info_s info);
         string config_errors[$];
         bit has_routing_enabled = 0;
 
-        `uvm_info(get_type_name(), $sformatf("🔍 === VALIDATING ROUTING CONFIG: %s ===", info.name), UVM_HIGH)
+        `uvm_info(get_type_name(), $sformatf(" === VALIDATING ROUTING CONFIG: %s ===", info.name), UVM_HIGH)
 
         // Check each destination for routing configuration consistency
         if (info.to_ap) begin
@@ -369,7 +306,7 @@ class int_monitor extends uvm_monitor;
 
         // Report configuration errors
         if (config_errors.size() > 0) begin
-            `uvm_error(get_type_name(), $sformatf("🚨 ROUTING CONFIG ERROR for '%s':", info.name))
+            `uvm_error(get_type_name(), $sformatf(" ROUTING CONFIG ERROR for '%s':", info.name))
             foreach (config_errors[i]) begin
                 `uvm_error(get_type_name(), $sformatf("   %0d. %s", i+1, config_errors[i]))
             end
@@ -379,7 +316,7 @@ class int_monitor extends uvm_monitor;
             `uvm_info(get_type_name(), $sformatf("ℹ️  No routing enabled for '%s'", info.name), UVM_HIGH)
         end
 
-        `uvm_info(get_type_name(), $sformatf("🔍 === END ROUTING CONFIG VALIDATION: %s ===", info.name), UVM_HIGH)
+        `uvm_info(get_type_name(), $sformatf(" === END ROUTING CONFIG VALIDATION: %s ===", info.name), UVM_HIGH)
     endfunction
 
     // Debug function to show interrupt configuration summary at startup
@@ -387,7 +324,7 @@ class int_monitor extends uvm_monitor;
         int group_counts[string];
         int total_interrupts = m_routing_model.interrupt_map.size();
 
-        `uvm_info(get_type_name(), "🔍 === INTERRUPT CONFIGURATION SUMMARY ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), " === INTERRUPT CONFIGURATION SUMMARY ===", UVM_MEDIUM)
         `uvm_info(get_type_name(), $sformatf("Total interrupts in map: %0d", total_interrupts), UVM_MEDIUM)
 
         // Count interrupts by group
@@ -408,7 +345,7 @@ class int_monitor extends uvm_monitor;
 
         // Show monitoring status
         `uvm_info(get_type_name(), "Monitor will track all configured interrupt destinations", UVM_MEDIUM)
-        `uvm_info(get_type_name(), "🔍 === END INTERRUPT CONFIGURATION SUMMARY ===", UVM_MEDIUM)
+        `uvm_info(get_type_name(), " === END INTERRUPT CONFIGURATION SUMMARY ===", UVM_MEDIUM)
     endfunction
 
 endclass

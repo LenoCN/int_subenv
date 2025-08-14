@@ -43,16 +43,16 @@ class int_driver extends uvm_driver #(int_stimulus_item);
         `uvm_info(get_type_name(), $sformatf("  - RTL Source Path: %s", item.interrupt_info.rtl_path_src), UVM_MEDIUM)
 
         if (item.interrupt_info.rtl_path_src == "") begin
-            `uvm_warning(get_type_name(), $sformatf("⚠️  Source path for interrupt '%s' is empty. Skipping stimulus generation.",
+            `uvm_error(get_type_name(), $sformatf("Source path for interrupt '%s' is empty. Skipping stimulus generation.",
                          item.interrupt_info.name));
             return;
         end
 
         // Check if this is a merge interrupt - merge interrupts should not be directly stimulated
         if (is_merge_interrupt(item.interrupt_info.name)) begin
-            `uvm_warning(get_type_name(), $sformatf("⚠️  Interrupt '%s' is a merge signal. Merge signals should not be directly stimulated. Skipping stimulus generation.",
+            `uvm_error(get_type_name(), $sformatf("Interrupt '%s' is a merge signal. Merge signals should not be directly stimulated. Skipping stimulus generation.",
                          item.interrupt_info.name));
-            `uvm_info(get_type_name(), "💡 To test merge signals, stimulate their source interrupts instead.", UVM_MEDIUM)
+            `uvm_info(get_type_name(), " To test merge signals, stimulate their source interrupts instead.", UVM_MEDIUM)
             return;
         end
 
@@ -61,7 +61,7 @@ class int_driver extends uvm_driver #(int_stimulus_item);
         if (item.interrupt_info.to_ap) `uvm_info(get_type_name(), $sformatf("  ✅ AP: %s", item.interrupt_info.rtl_path_ap), UVM_MEDIUM);
         if (item.interrupt_info.to_scp) `uvm_info(get_type_name(), $sformatf("  ✅ SCP: %s", item.interrupt_info.rtl_path_scp), UVM_MEDIUM);
         if (item.interrupt_info.to_mcp) `uvm_info(get_type_name(), $sformatf("  ✅ MCP: %s", item.interrupt_info.rtl_path_mcp), UVM_MEDIUM);
-        if (item.interrupt_info.to_accel) `uvm_info(get_type_name(), $sformatf("  ✅ ACCEL: %s", item.interrupt_info.rtl_path_accel), UVM_MEDIUM);
+        if (item.interrupt_info.to_accel) `uvm_info(get_type_name(), $sformatf("  ✅ ACCEL : %s", item.interrupt_info.rtl_path_accel), UVM_MEDIUM);
         if (item.interrupt_info.to_io) `uvm_info(get_type_name(), $sformatf("  ✅ IO: %s", item.interrupt_info.rtl_path_io), UVM_MEDIUM);
         if (item.interrupt_info.to_other_die) `uvm_info(get_type_name(), $sformatf("  ✅ OTHER_DIE: %s", item.interrupt_info.rtl_path_other_die), UVM_MEDIUM);
 
@@ -178,14 +178,14 @@ class int_driver extends uvm_driver #(int_stimulus_item);
             uvm_hdl_force(info.rtl_path_src, 0);
             #(timing_cfg.pulse_setup_time_ns * 1ns);
             uvm_hdl_force(info.rtl_path_src, 1);
-            #(timing_cfg.pulse_width_ns * 1ns); // Configurable pulse width
+            #((info.pulse_width_ns > 0 ? info.pulse_width_ns : timing_cfg.pulse_width_ns) * 1ns); // Use per-interrupt pulse width or default
             uvm_hdl_force(info.rtl_path_src, 0);
             #(timing_cfg.pulse_hold_time_ns * 1ns);
         end else if (info.polarity == ACTIVE_LOW) begin
             uvm_hdl_force(info.rtl_path_src, 1);
             #(timing_cfg.pulse_setup_time_ns * 1ns);
             uvm_hdl_force(info.rtl_path_src, 0);
-            #(timing_cfg.pulse_width_ns * 1ns); // Configurable pulse width
+            #((info.pulse_width_ns > 0 ? info.pulse_width_ns : timing_cfg.pulse_width_ns) * 1ns); // Use per-interrupt pulse width or default
             uvm_hdl_force(info.rtl_path_src, 1);
             #(timing_cfg.pulse_hold_time_ns * 1ns);
         end else begin
@@ -193,7 +193,7 @@ class int_driver extends uvm_driver #(int_stimulus_item);
             uvm_hdl_force(info.rtl_path_src, 0);
             #(timing_cfg.pulse_setup_time_ns * 1ns);
             uvm_hdl_force(info.rtl_path_src, 1);
-            #(timing_cfg.pulse_width_ns * 1ns);
+            #((info.pulse_width_ns > 0 ? info.pulse_width_ns : timing_cfg.pulse_width_ns) * 1ns);
             uvm_hdl_force(info.rtl_path_src, 0);
             #(timing_cfg.pulse_hold_time_ns * 1ns);
         end
@@ -215,7 +215,6 @@ class int_driver extends uvm_driver #(int_stimulus_item);
                 interrupt_name == "merge_pll_intr_frechangedone" ||
                 interrupt_name == "merge_pll_intr_frechange_tot_done" ||
                 interrupt_name == "merge_pll_intr_intdocfrac_err" ||
-                // New merge interrupts from CSV analysis
                 interrupt_name == "iosub_normal_intr" ||
                 interrupt_name == "iosub_slv_err_intr" ||
                 interrupt_name == "iosub_ras_cri_intr" ||
@@ -223,8 +222,10 @@ class int_driver extends uvm_driver #(int_stimulus_item);
                 interrupt_name == "iosub_ras_fhi_intr" ||
                 interrupt_name == "iosub_abnormal_0_intr" ||
                 interrupt_name == "iosub_abnormal_1_intr" ||
-                interrupt_name == "merge_external_pll_intr");
+                interrupt_name.substr(0,7) == "pmerge_"
+                );
     endfunction
+
 
 endclass
 

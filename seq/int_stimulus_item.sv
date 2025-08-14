@@ -23,16 +23,15 @@ class int_stimulus_item extends uvm_sequence_item;
     endfunction
 
     // Helper function to create a new stimulus item
-    // Note: UVM macros cannot be used in static functions as they call automatic methods
     static function int_stimulus_item create_stimulus(
         interrupt_info_s info,
         stimulus_type_e type_val = STIMULUS_ASSERT
     );
         int_stimulus_item item = int_stimulus_item::type_id::create("stim_item");
-
+        
         item.interrupt_info = info;
         item.stimulus_type = type_val;
-
+        
         return item;
     endfunction
 

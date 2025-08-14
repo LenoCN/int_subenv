@@ -48,7 +48,7 @@ class int_coverage extends uvm_subscriber #(int_transaction);
             bins ap_dest = {"AP"};
             bins scp_dest = {"SCP"};
             bins mcp_dest = {"MCP"};
-            bins accel_dest = {"ACCEL"};
+            bins imu_dest = {"ACCEL"};
             bins io_dest = {"IO"};
             bins other_die_dest = {"OTHER_DIE"};
         }
@@ -125,11 +125,12 @@ class int_coverage extends uvm_subscriber #(int_transaction);
 
     // Main write function called for each transaction
     virtual function void write(int_transaction t);
+        string interrupt_key;
         m_transaction = t;
         total_interrupts_seen++;
         
         // Track unique interrupts
-        string interrupt_key = $sformatf("%s@%s", t.interrupt_info.name, t.destination_name);
+        interrupt_key = $sformatf("%s@%s", t.interrupt_info.name, t.destination_name);
         if (!seen_interrupts.exists(interrupt_key)) begin
             seen_interrupts[interrupt_key] = interrupt_key;
             unique_interrupts_seen++;
@@ -159,6 +160,7 @@ class int_coverage extends uvm_subscriber #(int_transaction);
     // Report coverage statistics
     virtual function void report_phase(uvm_phase phase);
         real basic_coverage, routing_coverage, timing_coverage;
+        real overall_coverage;
         
         super.report_phase(phase);
         
@@ -175,7 +177,7 @@ class int_coverage extends uvm_subscriber #(int_transaction);
         `uvm_info(get_type_name(), $sformatf("Timing coverage: %0.2f%%", timing_coverage), UVM_LOW)
         
         // Calculate overall coverage
-        real overall_coverage = (basic_coverage + routing_coverage + timing_coverage) / 3.0;
+        overall_coverage = (basic_coverage + routing_coverage + timing_coverage) / 3.0;
         `uvm_info(get_type_name(), $sformatf("Overall functional coverage: %0.2f%%", overall_coverage), UVM_LOW)
         
         // Coverage goals check
