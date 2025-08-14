@@ -64,6 +64,10 @@ class int_register_model extends uvm_object;
         ADDR_ACCEL_UART_SEL     = 32'h0001_C0C0,
         ADDR_ACCEL_DMA_CH_SEL   = 32'h0001_C0C4,
 
+        // New interrupt mask registers for Level and Pulse interrupts
+        ADDR_LEVEL_INTR_ENABLE  = 32'h0001_0608,  // Level interrupts mask at 0x10600+0x8
+        ADDR_PULSE_INTR_ENABLE  = 32'h0001_0408,  // Pulse interrupts mask at 0x10400+0x8
+
         // Hardware lock register
         ADDR_HW_LOCK_NONSEC     = 32'h0001_D000
     } register_addr_e;
@@ -202,6 +206,13 @@ class int_register_model extends uvm_object;
         random_value = $urandom() & 32'h00FF_FFFF;
         write_register(ADDR_ACCEL_DMA_CH_SEL, random_value);
 
+        // Randomize Level and Pulse interrupt enable registers
+        random_value = $urandom() & 32'h001F_FFFF;  // [20:0] valid for level interrupts
+        write_register(ADDR_LEVEL_INTR_ENABLE, random_value);
+
+        random_value = $urandom() & 32'h0003_FFFF;  // [17:0] valid for pulse interrupts
+        write_register(ADDR_PULSE_INTR_ENABLE, random_value);
+
         `uvm_info("INT_REG_MODEL", "Mask registers randomized for test initialization", UVM_MEDIUM)
     endtask
 
@@ -320,6 +331,98 @@ class int_register_model extends uvm_object;
         return ~mask_value[bit_idx];
     endfunction
 
+    // Check Level/Pulse interrupt mask layer
+    function bit check_level_pulse_mask_layer(string interrupt_name);
+        logic [31:0] mask_value;
+        int bit_idx = -1;
+        bit is_level = 0;
+        bit is_pulse = 0;
+        logic [31:0] addr;
+        
+        `uvm_info("INT_REG_MODEL", $sformatf("Checking Level/Pulse mask for interrupt: %s", interrupt_name), UVM_HIGH)
+        
+        // Check if this is a Level interrupt
+        if (interrupt_name.match("iosub_pad_in_*_intr_level")) begin
+            // Extract pad index from interrupt name (0-15)
+            int pad_idx;
+            if ($sscanf(interrupt_name, "iosub_pad_in_%0d_intr_level", pad_idx) == 1) begin
+                if (pad_idx >= 0 && pad_idx <= 15) begin
+                    bit_idx = pad_idx;
+                    is_level = 1;
+                    addr = ADDR_LEVEL_INTR_ENABLE;
+                end
+            end
+        end else if (interrupt_name == "iosub_nic400_in_slverr_wr_intr") begin
+            bit_idx = 16;
+            is_level = 1;
+            addr = ADDR_LEVEL_INTR_ENABLE;
+        end else if (interrupt_name == "iosub_nic400_in_slverr_rd_intr") begin
+            bit_idx = 17;
+            is_level = 1;
+            addr = ADDR_LEVEL_INTR_ENABLE;
+        end else if (interrupt_name == "iosub_nic400_out_slverr_wr_intr") begin
+            bit_idx = 18;
+            is_level = 1;
+            addr = ADDR_LEVEL_INTR_ENABLE;
+        end else if (interrupt_name == "iosub_nic400_out_slverr_rd_intr") begin
+            bit_idx = 19;
+            is_level = 1;
+            addr = ADDR_LEVEL_INTR_ENABLE;
+        end else if (interrupt_name == "iosub_apb1ton_pslverr_intr") begin
+            bit_idx = 20;
+            is_level = 1;
+            addr = ADDR_LEVEL_INTR_ENABLE;
+        end
+        
+        // Check if this is a Pulse interrupt
+        else if (interrupt_name.match("iosub_pad_in_*_intr_pulse")) begin
+            // Extract pad index from interrupt name (0-15)
+            int pad_idx;
+            if ($sscanf(interrupt_name, "iosub_pad_in_%0d_intr_pulse", pad_idx) == 1) begin
+                if (pad_idx >= 0 && pad_idx <= 15) begin
+                    bit_idx = pad_idx;
+                    is_pulse = 1;
+                    addr = ADDR_PULSE_INTR_ENABLE;
+                end
+            end
+        end else if (interrupt_name == "iosub_mem_ist_intr") begin
+            bit_idx = 16;
+            is_pulse = 1;
+            addr = ADDR_PULSE_INTR_ENABLE;
+        end else if (interrupt_name == "iosub_dw_axi_dlock_intr") begin
+            bit_idx = 17;
+            is_pulse = 1;
+            addr = ADDR_PULSE_INTR_ENABLE;
+        end
+        
+        // If not a Level/Pulse interrupt, return unmasked
+        if (!is_level && !is_pulse) begin
+            `uvm_info("INT_REG_MODEL", $sformatf("Interrupt '%s' is not a Level/Pulse interrupt, not masked", interrupt_name), UVM_HIGH)
+            return 0;
+        end
+        
+        // If bit index is invalid, return masked for safety
+        if (bit_idx < 0) begin
+            `uvm_info("INT_REG_MODEL", $sformatf("Invalid bit index for interrupt '%s', assuming masked", interrupt_name), UVM_MEDIUM)
+            return 1;
+        end
+        
+        // Get mask value from cache if available, otherwise assume enabled
+        if (current_mask_values.exists(addr)) begin
+            mask_value = current_mask_values[addr];
+            `uvm_info("INT_REG_MODEL", $sformatf("Found cached mask value: addr=0x%08x, value=0x%08x", addr, mask_value), UVM_HIGH)
+        end else begin
+            mask_value = 32'hFFFF_FFFF; // Default to enabled if not cached
+            `uvm_info("INT_REG_MODEL", $sformatf("No cached mask value for addr=0x%08x, using default 0x%08x (all enabled)", addr, mask_value), UVM_MEDIUM)
+        end
+        
+        // Return 1 if masked (bit is 0), 0 if enabled (bit is 1)
+        bit result = ~mask_value[bit_idx];
+        `uvm_info("INT_REG_MODEL", $sformatf("Level/Pulse mask result: interrupt='%s', addr=0x%08x, bit_idx=%0d, mask_bit=%b, result=%s",
+                  interrupt_name, addr, bit_idx, mask_value[bit_idx], result ? "BLOCKED" : "PASSED"), UVM_HIGH)
+        return result;
+    endfunction
+
     // Check if interrupt is masked (returns 1 if masked/disabled, 0 if enabled)
     function bit is_interrupt_masked(string interrupt_name, string destination, int_routing_model routing_model);
         bit iosub_normal_masked;
@@ -341,6 +444,12 @@ class int_register_model extends uvm_object;
         // PSUB/PCIE1 src mask
         if (info.name != "" && (info.group == PSUB || info.group == PCIE1)) begin
             if (check_source_domain_mask(info)) return 1;
+        end
+        
+        // Check Level/Pulse interrupt mask first
+        if (check_level_pulse_mask_layer(interrupt_name)) begin
+            `uvm_info("INT_REG_MODEL", $sformatf("Level/Pulse interrupt '%s' is masked", interrupt_name), UVM_HIGH)
+            return 1;
         end
         
         // PLL src mask
@@ -407,6 +516,13 @@ class int_register_model extends uvm_object;
 
         read_register(ADDR_MASK_PCIE1_TO_IOSUB_INTR, data);
         `uvm_info("INT_REG_MODEL", $sformatf("PCIE1->IOSUB Mask: 0x%08x", data), UVM_MEDIUM)
+
+        // Read and print Level/Pulse interrupt mask registers
+        read_register(ADDR_LEVEL_INTR_ENABLE, data);
+        `uvm_info("INT_REG_MODEL", $sformatf("Level Interrupt Enable: 0x%08x", data), UVM_MEDIUM)
+
+        read_register(ADDR_PULSE_INTR_ENABLE, data);
+        `uvm_info("INT_REG_MODEL", $sformatf("Pulse Interrupt Enable: 0x%08x", data), UVM_MEDIUM)
 
         `uvm_info("INT_REG_MODEL", "=== End Hardware Register Configuration ===", UVM_MEDIUM)
     endtask
