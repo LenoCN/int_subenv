@@ -1032,7 +1032,34 @@ class int_register_model extends uvm_object;
     function bit should_expect_merge_interrupt(string merge_name, string source_name, int_routing_model routing_model);
         interrupt_info_s merge_info;
         bit found_merge = 0;
+        
         `uvm_info("INT_REG_MODEL", $sformatf(" Checking if merge interrupt '%s' should be expected from source '%s'", merge_name, source_name), UVM_HIGH)
+        
+        // First, check if the source interrupt is masked at Level/Pulse layer
+        // If the source is masked, it cannot trigger any merge targets
+        if (check_level_pulse_mask_layer(source_name)) begin
+            `uvm_info("INT_REG_MODEL", $sformatf("❌ Source '%s' is masked by Level/Pulse mask layer, don't expect merge '%s'", source_name, merge_name), UVM_MEDIUM)
+            return 0;
+        end
+        
+        // Special handling for iosub_slv_err_intr
+        if (merge_name == "iosub_slv_err_intr") begin
+            // Check if source is one of the slave error sources
+            if (!(source_name == "iosub_nic400_in_slverr_wr_intr"  ||
+                  source_name == "iosub_nic400_in_slverr_rd_intr"  ||
+                  source_name == "iosub_nic400_out_slverr_wr_intr" ||
+                  source_name == "iosub_nic400_out_slverr_rd_intr" ||
+                  source_name == "iosub_apb1ton_pslverr_intr"      ||
+                  source_name == "usb0_apb1ton_intr"                ||
+                  source_name == "usb1_apb1ton_intr"                ||
+                  source_name == "usb_top_apb1ton_intr")) begin
+                `uvm_info("INT_REG_MODEL", $sformatf("❌ Source '%s' is not an iosub_slv_err_intr source", source_name), UVM_HIGH)
+                return 0;
+            end
+            
+            `uvm_info("INT_REG_MODEL", $sformatf("✅ Source '%s' passes mask check, expect merge '%s'", source_name, merge_name), UVM_HIGH)
+            return 1;
+        end
 
         // Special handling for iosub_normal_intr
         if (merge_name == "iosub_normal_intr") begin
