@@ -305,7 +305,7 @@ class int_register_model extends uvm_object;
         logic [31:0] addr;
     
         if (!get_pll_type_and_bit(name, t, bit_idx)) begin
-            `uvm_info("INT_REG_MODEL", $sformatf("PLL source '%s', mask_value : %h, addr : %h, bit_idx : %h .", name, mask_value, addr, bit_idx), UVM_HIGH)
+            `uvm_info("INT_REG_MODEL", $sformatf("Non-PLL source '%s', not subject to PLL mask layer", name), UVM_HIGH)
             return 0; // 非 PLL 源或无法识别，视为不受 PLL 源层屏蔽
         end
         
@@ -342,7 +342,7 @@ class int_register_model extends uvm_object;
         `uvm_info("INT_REG_MODEL", $sformatf("Checking Level/Pulse mask for interrupt: %s", interrupt_name), UVM_HIGH)
         
         // Check if this is a Level interrupt
-        if (interrupt_name.match("iosub_pad_in_*_intr_level")) begin
+        if (interrupt_name.match("iosub_pad_in_[0-9]+_intr_level")) begin
             // Extract pad index from interrupt name (0-15)
             int pad_idx;
             if ($sscanf(interrupt_name, "iosub_pad_in_%0d_intr_level", pad_idx) == 1) begin
@@ -375,7 +375,7 @@ class int_register_model extends uvm_object;
         end
         
         // Check if this is a Pulse interrupt
-        else if (interrupt_name.match("iosub_pad_in_*_intr_pulse")) begin
+        else if (interrupt_name.match("iosub_pad_in_[0-9]+_intr_pulse")) begin
             // Extract pad index from interrupt name (0-15)
             int pad_idx;
             if ($sscanf(interrupt_name, "iosub_pad_in_%0d_intr_pulse", pad_idx) == 1) begin

@@ -288,7 +288,14 @@ class int_base_sequence extends uvm_sequence;
         // 1. Add expectation for the current interrupt in the chain (direct or merged)
         add_expected_with_mask(current_info, original_source_name);
 
-        // 2. Find what this interrupt merges into (next level) and recurse
+        // 2. Check if this source interrupt is masked before processing its merge targets
+        // If the source is masked, it cannot trigger its merge targets
+        if (m_register_model.check_level_pulse_mask_layer(current_info.name)) begin
+            `uvm_info(get_type_name(), $sformatf("[RECURSIVE_ADD] Source interrupt '%s' is masked - skipping merge target processing", current_info.name), UVM_MEDIUM);
+            return;
+        end
+
+        // 3. Find what this interrupt merges into (next level) and recurse
         m_routing_model.get_merge_interrupts_for_source(current_info.name, merge_interrupts);
         foreach (merge_interrupts[i]) begin
             if (m_routing_model.get_merge_interrupt_info(merge_interrupts[i], merge_info)) begin
@@ -311,7 +318,14 @@ class int_base_sequence extends uvm_sequence;
         // 1. Wait for the current interrupt in the chain
         wait_for_interrupt_detection_with_mask(current_info, timeout_ns);
 
-        // 2. Find next-level merges and recurse
+        // 2. Check if this source interrupt is masked before processing its merge targets
+        // If the source is masked, it cannot trigger its merge targets  
+        if (m_register_model.check_level_pulse_mask_layer(current_info.name)) begin
+            `uvm_info(get_type_name(), $sformatf("[RECURSIVE_WAIT] Source interrupt '%s' is masked - skipping merge target processing", current_info.name), UVM_MEDIUM);
+            return;
+        end
+
+        // 3. Find next-level merges and recurse
         m_routing_model.get_merge_interrupts_for_source(current_info.name, merge_interrupts);
         foreach (merge_interrupts[i]) begin
              if (m_routing_model.get_merge_interrupt_info(merge_interrupts[i], merge_info)) begin
@@ -335,7 +349,14 @@ class int_base_sequence extends uvm_sequence;
         // 1. Update status for the current interrupt
         m_routing_model.update_interrupt_status(current_info.name, 1, m_register_model);
         
-        // 2. Find next-level merges and recurse
+        // 2. Check if this source interrupt is masked before processing its merge targets
+        // If the source is masked, it cannot trigger its merge targets
+        if (m_register_model.check_level_pulse_mask_layer(current_info.name)) begin
+            `uvm_info(get_type_name(), $sformatf("[RECURSIVE_UPDATE] Source interrupt '%s' is masked - skipping merge target processing", current_info.name), UVM_MEDIUM);
+            return;
+        end
+        
+        // 3. Find next-level merges and recurse
         m_routing_model.get_merge_interrupts_for_source(current_info.name, merge_interrupts);
         foreach (merge_interrupts[i]) begin
              if (m_routing_model.get_merge_interrupt_info(merge_interrupts[i], merge_info)) begin
